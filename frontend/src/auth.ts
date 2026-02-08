@@ -3,7 +3,25 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Safe initialization
+const isValidUrl = (url: string) => {
+    try {
+        return Boolean(new URL(url));
+    } catch (e) {
+        return false;
+    }
+};
+
+export const supabase = (supabaseUrl && isValidUrl(supabaseUrl) && supabaseAnonKey)
+    ? createClient(supabaseUrl, supabaseAnonKey)
+    : {
+        auth: {
+            signUp: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+            signInWithPassword: async () => ({ data: null, error: { message: 'Supabase not configured' } }),
+            signOut: async () => ({ error: null }),
+            getUser: async () => ({ data: { user: null } }),
+        }
+    } as any;
 
 // 1. Sign Up
 export const signUpUser = async (email: string, password: string) => {

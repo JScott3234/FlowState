@@ -14,10 +14,19 @@ interface TimeBlockProps {
 const TimeBlock: React.FC<TimeBlockProps> = ({ day, hour, minute, category }) => {
     // Unique ID for the drop zone
     const id = `${day.toISOString()}|${category}|${hour}|${minute}`;
+    // console.log('TimeBlock render', id); 
+
+    // Construct the specific date time for this block
+    const blockDate = new Date(day);
+    blockDate.setHours(hour, minute, 0, 0);
 
     const { isOver, setNodeRef } = useDroppable({
         id,
-        data: { day, hour, minute, category },
+        data: {
+            type: 'calendar-cell',
+            date: blockDate,
+            category
+        },
     });
 
     return (

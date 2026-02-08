@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { signInUser, signUpUser } from './auth.ts' // Import from your helper file
 
 export default function AuthPage() {
+    const navigate = useNavigate()
     const [isLoginView, setIsLoginView] = useState(true) // Toggle between Login/Signup
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -27,7 +29,10 @@ export default function AuthPage() {
                 setMessage('Registration successful! Please check your email to confirm.')
             } else {
                 setMessage('Success! You are logged in.')
-                // Redirect logic goes here (e.g., router.push('/dashboard'))
+                // Redirect logic
+                setTimeout(() => {
+                    navigate('/');
+                }, 1000);
             }
         }
     }

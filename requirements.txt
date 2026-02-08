@@ -3,3 +3,5 @@ langgraph
 python-dotenv
 pymongo
 pydantic
+fastapi
+uvicorn[standard]

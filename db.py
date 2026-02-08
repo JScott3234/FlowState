@@ -256,22 +256,37 @@ def set_task(
     email: str, 
     title: str, 
     description: Optional[str] = None, 
-    tag_names: Optional[List[str]] = None
+    tag_names: Optional[List[str]] = None,
+    start_time: Optional[Any] = None,
+    end_time: Optional[Any] = None,
+    is_completed: bool = False,
+    recurrence: Optional[str] = None
 ) -> bool:
     """
     Creates or updates a task. 
     - title is required
-    - description and tag_names are optional
+    - description, tag_names, times, recurrence are optional
     Returns True if the operation was successful.
     """
     db = client[DB_NAME]
     collection = db["tasks"]
     
-    update_data = {"email": email, "title": title}
+    update_data = {
+        "email": email, 
+        "title": title,
+        "is_completed": is_completed
+    }
+    
     if description is not None:
         update_data["description"] = description
     if tag_names is not None:
         update_data["tag_names"] = tag_names
+    if start_time is not None:
+        update_data["start_time"] = start_time
+    if end_time is not None:
+        update_data["end_time"] = end_time
+    if recurrence is not None:
+        update_data["recurrence"] = recurrence
     
     result = collection.update_one(
         {"email": email, "title": title},
@@ -279,6 +294,36 @@ def set_task(
         upsert=True
     )
     return result.acknowledged
+
+
+def update_task_fields(client: MongoClient, task_id: str, updates: Dict[str, Any]) -> bool:
+    """
+    Updates specific fields of a task using its _id.
+    """
+    from bson import ObjectId
+    db = client[DB_NAME]
+    collection = db["tasks"]
+    
+    # potentially filter out _id from updates if passed
+    if "_id" in updates:
+        del updates["_id"]
+
+    result = collection.update_one(
+        {"_id": ObjectId(task_id)},
+        {"$set": updates}
+    )
+    return result.acknowledged
+
+
+def delete_task_by_id(client: MongoClient, task_id: str) -> bool:
+    """
+    Deletes a task by its _id.
+    """
+    from bson import ObjectId
+    db = client[DB_NAME]
+    collection = db["tasks"]
+    result = collection.delete_one({"_id": ObjectId(task_id)})
+    return result.deleted_count > 0
 
 
 def set_task_description(client: MongoClient, email: str, title: str, description: str) -> bool:

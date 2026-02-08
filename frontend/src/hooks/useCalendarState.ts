@@ -1,17 +1,76 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Task, CategoryId } from '../types/calendarTypes';
-import { MOCK_TASKS } from '../data/mock-tasks';
 import { addMinutes, isSameDay } from 'date-fns';
+import { taskAPI } from '../api/flowstate';
+
+// Hardcoded for dev/demo purposes
+const DEMO_EMAIL = "ricardomulino@gmail.com";
 
 export function useCalendarState() {
-    const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
+    const [tasks, setTasks] = useState<Task[]>([]);
 
-    const addTask = useCallback((task: Task) => {
-        setTasks((prev) => [...prev, task]);
+    const fetchTasks = useCallback(async () => {
+        try {
+            const fetchedTasks = await taskAPI.getAllForUser(DEMO_EMAIL);
+            // Transform API tasks to frontend Task format
+            const formattedTasks: Task[] = fetchedTasks.map((t: any) => ({
+                id: t._id || t.id,
+                title: t.title,
+                description: t.description,
+                startTime: t.start_time ? new Date(t.start_time) : new Date(), // Fallback
+                endTime: t.end_time ? new Date(t.end_time) : addMinutes(new Date(), 30),
+                category: (t.tag_names?.[0] as CategoryId) || 'work',
+                duration: t.duration || 30,
+                color: t.color || '#3b82f6',
+                isCompleted: t.is_completed || false,
+                estimatedTime: t.estimatedTime || 30,
+                recurrence: t.recurrence,
+                tagNames: t.tag_names || []
+            }));
+            setTasks(formattedTasks);
+        } catch (error) {
+            console.error("Failed to fetch tasks:", error);
+        }
     }, []);
 
-    const updateTask = useCallback((id: string, updates: Partial<Task>) => {
+    useEffect(() => {
+        fetchTasks();
+    }, [fetchTasks]);
+
+    const addTask = useCallback(async (task: Task) => {
+        // Optimistic update
+        setTasks((prev) => [...prev, task]);
+        try {
+            await taskAPI.create(
+                DEMO_EMAIL,
+                task.title,
+                task.description,
+                [task.category],
+                task.startTime,
+                task.endTime,
+                task.recurrence
+            );
+            // Refresh to get ID
+            fetchTasks();
+        } catch (e) {
+            console.error("Failed to add task", e);
+        }
+    }, [fetchTasks]);
+
+    const updateTask = useCallback(async (id: string, updates: Partial<Task>) => {
         setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+        try {
+            const backendUpdates: any = { ...updates };
+            // Map frontend keys to backend keys
+            if (updates.startTime) backendUpdates.start_time = updates.startTime.toISOString();
+            if (updates.endTime) backendUpdates.end_time = updates.endTime.toISOString();
+            if (updates.tagNames) backendUpdates.tag_names = updates.tagNames;
+            if (updates.isCompleted !== undefined) backendUpdates.is_completed = updates.isCompleted;
+
+            await taskAPI.update(id, backendUpdates);
+        } catch (e) {
+            console.error("Failed to update task", e);
+        }
     }, []);
 
     const moveTask = useCallback((id: string, newStartTime: Date, newCategory?: CategoryId) => {
@@ -21,11 +80,24 @@ export function useCalendarState() {
             const duration = t.duration;
             const endTime = addMinutes(newStartTime, duration);
 
-            return {
-                ...t,
+            // Trigger API update
+            const updates: Partial<Task> = {
                 startTime: newStartTime,
                 endTime,
-                category: newCategory || t.category,
+                category: newCategory || t.category
+            };
+
+            // We call the API asynchronously but update state immediately
+            taskAPI.update(id, {
+                start_time: newStartTime.toISOString(),
+                end_time: endTime.toISOString(),
+                // @ts-ignore
+                tag_names: [newCategory || t.category]
+            } as any).catch(console.error);
+
+            return {
+                ...t,
+                ...updates
             };
         }));
     }, []);
@@ -36,6 +108,13 @@ export function useCalendarState() {
 
             const endTime = addMinutes(t.startTime, newDuration);
 
+            // Trigger API update
+            taskAPI.update(id, {
+                end_time: endTime.toISOString(),
+                // We might need to store duration explicitly if backend supports it,
+                // otherwise it's derived from start/end
+            }).catch(console.error);
+
             return {
                 ...t,
                 duration: newDuration,
@@ -45,9 +124,19 @@ export function useCalendarState() {
         }));
     }, []);
 
+    const deleteTask = useCallback(async (id: string) => {
+        setTasks((prev) => prev.filter((t) => t.id !== id));
+        try {
+            await taskAPI.delete(id);
+        } catch (e) {
+            console.error("Failed to delete task", e);
+            // Optionally revert state here if needed
+        }
+    }, []);
+
     const getTasksForDayAndCategory = useCallback((date: Date, categoryId: CategoryId) => {
         return tasks.filter((t) =>
-            t.category === categoryId && isSameDay(t.startTime, date)
+            (t.category === categoryId || t.tagNames?.includes(categoryId)) && isSameDay(t.startTime, date)
         );
     }, [tasks]);
 
@@ -57,6 +146,7 @@ export function useCalendarState() {
         updateTask,
         moveTask,
         resizeTask,
+        deleteTask,
         getTasksForDayAndCategory,
     };
 }

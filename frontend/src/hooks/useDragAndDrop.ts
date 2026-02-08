@@ -8,13 +8,13 @@ import {
     type DragStartEvent,
     type DragEndEvent
 } from '@dnd-kit/core';
-import type { Task } from '../types/calendar';
+import type { Task, CategoryId } from '../types/calendarTypes';
 import type { TaskTemplate } from '../data/templates';
 
 interface UseDragAndDropProps {
     tasks: Task[];
-    onTaskMove: (taskId: string, newStartTime: Date, newCategory: string) => void;
-    onTaskCreate?: (template: TaskTemplate, startTime: Date, category: string) => void;
+    onTaskMove: (taskId: string, newStartTime: Date, newCategory: CategoryId) => void;
+    onTaskCreate?: (template: TaskTemplate, startTime: Date, category: CategoryId) => void;
 }
 
 export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDropProps) {
@@ -89,7 +89,7 @@ export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDr
                 newStartTime.setHours(Math.floor(newMinutes / 60));
                 newStartTime.setMinutes(newMinutes % 60);
 
-                onTaskCreate(activeTemplate, newStartTime, overData.category || activeTemplate.category);
+                onTaskCreate(activeTemplate, newStartTime, (overData.category || activeTemplate.category) as CategoryId);
             }
             // Handle existing task move
             else if (activeTask) {
@@ -107,7 +107,7 @@ export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDr
                 onTaskMove(
                     active.id as string,
                     newStartTime,
-                    overData.category || activeTask.category
+                    (overData.category || activeTask.category) as CategoryId
                 );
             }
         }

@@ -1,4 +1,4 @@
-import type { CategoryId } from "../types/calendar";
+import type { CategoryId } from "../types/calendarTypes";
 
 export interface TaskTemplate {
     id: string;
@@ -6,6 +6,7 @@ export interface TaskTemplate {
     duration: number; // minutes
     category: CategoryId;
     color: string;
+    recurrence?: string;
 }
 
 export const TASK_TEMPLATES: TaskTemplate[] = [

@@ -17,6 +17,8 @@ export interface Task {
     color: string;
     isCompleted: boolean;
     estimatedTime: number;
+    recurrence?: string;
+    tagNames?: string[];
 }
 
 export const CATEGORIES: Category[] = [

@@ -7,12 +7,14 @@ interface DayCellProps {
     day: Date;
     category: CategoryId;
     tasks: Task[];
+    onEdit?: (task: Task) => void;
 }
 
 export const DayCell: React.FC<DayCellProps> = ({
     day,
     category,
-    tasks
+    tasks,
+    onEdit
 }) => {
     return (
         <SnapGrid date={day} category={category}>
@@ -25,7 +27,7 @@ export const DayCell: React.FC<DayCellProps> = ({
                             top: `${getYPosition(task.startTime)}px`,
                         }}
                     >
-                        <SmoothDraggableTask task={task} />
+                        <SmoothDraggableTask task={task} onEdit={onEdit} />
                     </div>
                 ))}
             </div>

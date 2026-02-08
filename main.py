@@ -7,7 +7,8 @@ from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
+from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
@@ -54,6 +55,20 @@ class TaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     tag_names: Optional[List[str]] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    is_completed: bool = False
+    recurrence: Optional[str] = None
+
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    tag_names: Optional[List[str]] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    is_completed: Optional[bool] = None
+    recurrence: Optional[str] = None
 
 
 class TaskDescriptionUpdate(BaseModel):
@@ -392,10 +407,36 @@ async def get_tasks_by_tag(email: str, tag_name: str):
 async def create_task(task: TaskCreate):
     """Create or update a task"""
     client = get_client()
-    result = db.set_task(client, task.email, task.title, task.description, task.tag_names)
+    result = db.set_task(
+        client, 
+        task.email, 
+        task.title, 
+        task.description, 
+        task.tag_names,
+        task.start_time,
+        task.end_time,
+        task.is_completed,
+        task.recurrence
+    )
     if not result:
         raise HTTPException(status_code=500, detail="Failed to create task")
     return {"message": "Task created successfully", "title": task.title}
+
+
+@app.patch("/api/tasks/{task_id}")
+async def update_task(task_id: str, updates: TaskUpdate):
+    """Update specific fields of a task"""
+    client = get_client()
+    # Filter out None values to only update what was sent
+    update_data = {k: v for k, v in updates.dict().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+        
+    result = db.update_task_fields(client, task_id, update_data)
+    if not result:
+        raise HTTPException(status_code=404, detail="Task not found or update failed")
+    return {"message": "Task updated successfully"}
 
 
 @app.put("/api/tasks/{email}/{title}/description")
@@ -443,6 +484,16 @@ async def delete_task(email: str, title: str):
     """Delete a task"""
     client = get_client()
     result = db.delete_task(client, email, title)
+    if not result:
+        raise HTTPException(status_code=404, detail="Task not found or update failed")
+    return {"message": "Task updated successfully"}
+
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task_by_id(task_id: str):
+    """Delete a task by ID"""
+    client = get_client()
+    result = db.delete_task_by_id(client, task_id)
     if not result:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"message": "Task deleted successfully"}

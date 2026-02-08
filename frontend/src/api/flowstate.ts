@@ -209,14 +209,34 @@ export const taskAPI = {
         email: string,
         title: string,
         description?: string,
-        tagNames?: string[]
+        tagNames?: string[],
+        startTime?: Date,
+        endTime?: Date,
+        recurrence?: string
     ): Promise<void> => {
         const response = await fetch(`${API_BASE}/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, title, description, tag_names: tagNames }),
+            body: JSON.stringify({
+                email,
+                title,
+                description,
+                tag_names: tagNames,
+                start_time: startTime?.toISOString(),
+                end_time: endTime?.toISOString(),
+                recurrence
+            }),
         });
         if (!response.ok) throw new Error('Failed to create task');
+    },
+
+    update: async (taskId: string, updates: Partial<Task>): Promise<void> => {
+        const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updates),
+        });
+        if (!response.ok) throw new Error('Failed to update task');
     },
 
     updateDescription: async (email: string, title: string, description: string): Promise<void> => {
@@ -274,6 +294,13 @@ export const taskAPI = {
                 method: 'DELETE',
             }
         );
+        if (!response.ok) throw new Error('Failed to delete task');
+    },
+
+    deleteById: async (taskId: string): Promise<void> => {
+        const response = await fetch(`${API_BASE}/tasks/${taskId}`, {
+            method: 'DELETE',
+        });
         if (!response.ok) throw new Error('Failed to delete task');
     },
 };

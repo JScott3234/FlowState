@@ -8,6 +8,7 @@ import AuthPage from './login.tsx'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
+import { CalendarProvider } from './contexts/CalendarContext.tsx'
 import { ProtectedRoute } from './components/ProtectedRoute.tsx'
 
 import { Dashboard } from './pages/Dashboard.tsx'
@@ -77,7 +78,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <CalendarProvider>
+          <RouterProvider router={router} />
+        </CalendarProvider>
       </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,

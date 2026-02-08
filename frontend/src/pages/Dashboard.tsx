@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import { TaskSidebar } from '../components/sidebar/TaskSidebar';
 import { CreateTaskModal } from '../components/modals/CreateTaskModal';
-import { useCalendarState } from '../hooks/useCalendarState';
 import { useTags } from '../hooks/useTags';
 import type { CategoryId, Category } from '../types/calendarTypes';
 import { CATEGORIES } from '../types/calendarTypes';
@@ -14,17 +13,20 @@ import { ViewSwitcher, type CalendarViewMode } from '../components/calendar/View
 import { MonthView } from '../components/calendar/MonthView';
 import { YearView } from '../components/calendar/YearView';
 import { useAuth } from '../contexts/AuthContext';
+import { useCalendar } from '../contexts/CalendarContext';
 
 export const Dashboard = () => {
     const { email } = useAuth();
 
     const {
+        currentDate,
+        setCurrentDate,
         tasks,
         addTask,
         updateTask,
         moveTask,
         deleteTask
-    } = useCalendarState(email);
+    } = useCalendar();
 
     const { tags } = useTags(email);
 
@@ -47,7 +49,7 @@ export const Dashboard = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     // Calendar State
-    const [currentDate, setCurrentDate] = useState(new Date());
+    // currentDate is now from context
     const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
 
     // Navigation handlers

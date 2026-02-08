@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
+    Home,
     LayoutDashboard,
     Calendar,
     CheckSquare,
@@ -24,7 +25,7 @@ export const Sidebar: React.FC = () => {
     };
 
     const mainNavItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/dash' },
+        { icon: Home, label: 'Dashboard', path: '/dash' },
         { icon: Calendar, label: 'Calendar', path: '/calendar' },
         { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
         { icon: Tag, label: 'Tags', path: '/tags' },

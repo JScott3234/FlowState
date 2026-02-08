@@ -1,27 +1,29 @@
 import { useState } from 'react';
 import { LogOut } from 'lucide-react';
-import { signOutUser } from '../../auth.ts';
-import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 
 export const Header: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const navigate = useNavigate();
+    const { email, signOut } = useAuth();
 
     const handleLogout = async () => {
-        await signOutUser();
-        navigate('/');
+        await signOut();
     };
 
     const switchAccount = async () => {
-        await signOutUser();
-        navigate('/login');
+        await signOut();
     }
 
     return (
         <header className="flex items-center justify-between px-6 py-4 glass-panel rounded-2xl relative z-30">
             <div className="flex items-center gap-3">
-                {/* Logo moved to Sidebar, keeping this empty or for breadcrumbs later */}
-                <h2 className="text-2xl font-bold text-white tracking-tight">Dashboard</h2>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">F</span>
+                </div>
+                <div>
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">FlowState</h2>
+                    <p className="text-xs text-slate-400">{email || 'Loading...'}</p>
+                </div>
             </div>
 
             <div className="flex items-center gap-4">

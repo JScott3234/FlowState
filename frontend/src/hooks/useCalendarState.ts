@@ -3,15 +3,13 @@ import type { Task, CategoryId } from '../types/calendarTypes';
 import { addMinutes, isSameDay } from 'date-fns';
 import { taskAPI } from '../api/flowstate';
 
-// Hardcoded for dev/demo purposes
-const DEMO_EMAIL = "test@mulino.com";
-
-export function useCalendarState() {
+export function useCalendarState(userEmail: string | null) {
     const [tasks, setTasks] = useState<Task[]>([]);
 
     const fetchTasks = useCallback(async () => {
+        if (!userEmail) return;
         try {
-            const fetchedTasks = await taskAPI.getAllForUser(DEMO_EMAIL);
+            const fetchedTasks = await taskAPI.getAllForUser(userEmail);
             // Transform API tasks to frontend Task format
             const formattedTasks: Task[] = fetchedTasks.map((t: any) => ({
                 id: t._id || t.id,
@@ -31,18 +29,19 @@ export function useCalendarState() {
         } catch (error) {
             console.error("Failed to fetch tasks:", error);
         }
-    }, []);
+    }, [userEmail]);
 
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks]);
 
     const addTask = useCallback(async (task: Task) => {
+        if (!userEmail) return;
         // Optimistic update
         setTasks((prev) => [...prev, task]);
         try {
             await taskAPI.create(
-                DEMO_EMAIL,
+                userEmail,
                 task.title,
                 task.description,
                 [task.category],

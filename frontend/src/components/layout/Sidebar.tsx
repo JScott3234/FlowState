@@ -4,6 +4,7 @@ import {
     LayoutDashboard,
     Calendar,
     CheckSquare,
+    Tag,
     Settings,
     LogOut,
     ChevronLeft,
@@ -23,9 +24,10 @@ export const Sidebar: React.FC = () => {
     };
 
     const mainNavItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+        { icon: LayoutDashboard, label: 'Dashboard', path: '/dash' },
         { icon: Calendar, label: 'Calendar', path: '/calendar' },
         { icon: CheckSquare, label: 'Tasks', path: '/tasks' },
+        { icon: Tag, label: 'Tags', path: '/tags' },
     ];
 
     const bottomNavItems = [

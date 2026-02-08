@@ -13,17 +13,20 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ViewSwitcher, type CalendarViewMode } from '../components/calendar/ViewSwitcher';
 import { MonthView } from '../components/calendar/MonthView';
 import { YearView } from '../components/calendar/YearView';
+import { useAuth } from '../contexts/AuthContext';
 
 export const Dashboard = () => {
+    const { email } = useAuth();
+
     const {
         tasks,
         addTask,
         updateTask,
         moveTask,
         deleteTask
-    } = useCalendarState();
+    } = useCalendarState(email);
 
-    const { tags } = useTags();
+    const { tags } = useTags(email);
 
     // Merge default categories with fetched tags
     // We treat tags as categories for now

@@ -263,9 +263,27 @@ async def get_user_description(email: str):
 async def create_user(user: UserCreate):
     """Create or update a user"""
     client = get_client()
+    
+    # Check if user already exists
+    existing_user = db.get_user(client, user.email)
+    is_new_user = existing_user is None
+    
+    # Create or update the user
     result = db.set_user(client, user.email, user.description)
     if not result:
         raise HTTPException(status_code=500, detail="Failed to create user")
+    
+    # If this is a new user, create default tags
+    if is_new_user:
+        default_tags = [
+            ("work", "Work related tasks and projects"),
+            ("school", "School assignments and academic activities"),
+            ("hobbies", "Personal hobbies and leisure activities")
+        ]
+        
+        for tag_name, tag_description in default_tags:
+            db.set_tag(client, user.email, tag_name, tag_description)
+    
     return {"message": "User created successfully", "email": user.email}
 
 

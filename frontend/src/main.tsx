@@ -7,8 +7,11 @@ import Landing from './landing.tsx'
 import AuthPage from './login.tsx'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary.tsx'
+import { AuthProvider } from './contexts/AuthContext.tsx'
+import { ProtectedRoute } from './components/ProtectedRoute.tsx'
 
 import { Dashboard } from './pages/Dashboard.tsx'
+import { Tags } from './pages/Tags.tsx'
 
 const router = createBrowserRouter([
   {
@@ -27,11 +30,29 @@ const router = createBrowserRouter([
   },
   {
     path: "/dash",
-    element: <App />,
+    element: (
+      <ProtectedRoute>
+        <App />
+      </ProtectedRoute>
+    ),
     children: [
       {
         index: true,
         element: <Dashboard />,
+      },
+    ],
+  },
+  {
+    path: "/tags",
+    element: (
+      <ProtectedRoute>
+        <App />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Tags />,
       },
     ],
   }
@@ -40,7 +61,9 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,
 )

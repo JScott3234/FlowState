@@ -5,14 +5,14 @@ import { SnapGrid } from './SnapGrid';
 
 interface DayCellProps {
     day: Date;
-    category: CategoryId;
+    category?: CategoryId; // Optional now, or defaults to specific logic
     tasks: Task[];
     onEdit?: (task: Task) => void;
 }
 
 export const DayCell: React.FC<DayCellProps> = ({
     day,
-    category,
+    category = 'work', // Default fallback if needed, or handle as generic
     tasks,
     onEdit
 }) => {

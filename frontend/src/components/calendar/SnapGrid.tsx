@@ -5,13 +5,13 @@ import type { CategoryId } from '../../types/calendar';
 
 interface SnapGridProps {
     date: Date;
-    category: CategoryId;
+    category?: CategoryId;
     children: React.ReactNode;
 }
 
 export const SnapGrid: React.FC<SnapGridProps> = ({
     date,
-    category,
+    category = 'work',
     children
 }) => {
     const { setNodeRef, isOver } = useDroppable({
@@ -43,7 +43,7 @@ export const SnapGrid: React.FC<SnapGridProps> = ({
                         key={i}
                         className={cn(
                             "absolute w-full border-b",
-                            i % 2 === 0
+                            i % 4 === 0
                                 ? "border-white/5"
                                 : "border-dashed border-white/[0.02]"
                         )}

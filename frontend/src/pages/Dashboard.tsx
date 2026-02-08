@@ -8,6 +8,9 @@ import { CATEGORIES } from '../types/calendarTypes';
 import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { SmoothDraggableTask } from '../components/calendar/SmoothDraggableTask';
+import { ViewSwitcher, type CalendarViewMode } from '../components/calendar/ViewSwitcher';
+import { MonthView } from '../components/calendar/MonthView';
+import { YearView } from '../components/calendar/YearView';
 
 export const Dashboard = () => {
     const {
@@ -21,6 +24,10 @@ export const Dashboard = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [filterCategory, setFilterCategory] = useState<CategoryId | 'all'>('all');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+    // Calendar State
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
 
     // Get recent tasks (sorted by creation/start time, most recent first)
     const recentTasks = [...tasks]
@@ -62,6 +69,11 @@ export const Dashboard = () => {
         }),
     };
 
+    const handleDateSelect = (date: Date) => {
+        setCurrentDate(date);
+        setViewMode('day'); // Switch to day view on click
+    };
+
     return (
         <DndContext
             sensors={sensors}
@@ -78,13 +90,46 @@ export const Dashboard = () => {
                     onFilterChange={setFilterCategory}
                 />
                 <main className="flex-1 overflow-hidden relative glass-panel rounded-2xl flex flex-col">
-                    <CalendarGrid
-                        tasks={filteredTasks}
-                        onTaskMove={(id, time, cat) => moveTask(id, time, cat as CategoryId)}
-                        onTaskUpdate={updateTask}
-                        onTaskDelete={deleteTask}
-                    // onTaskCreate is handled via DnD hook directly or we can pass it if Grid needs it
-                    />
+                    {/* Header Controls */}
+                    <div className="flex justify-between items-center p-4 border-b border-white/5">
+                        <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
+                            {viewMode === 'year'
+                                ? currentDate.getFullYear()
+                                : currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </h2>
+                        <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
+                    </div>
+
+                    {/* Content View */}
+                    <div className="flex-1 overflow-hidden relative">
+                        {(viewMode === 'day' || viewMode === 'week') && (
+                            <CalendarGrid
+                                tasks={filteredTasks}
+                                currentDate={currentDate}
+                                viewMode={viewMode}
+                                onDateSelect={handleDateSelect}
+                                onTaskUpdate={updateTask}
+                                onTaskDelete={deleteTask}
+                            />
+                        )}
+                        {viewMode === 'month' && (
+                            <MonthView
+                                currentDate={currentDate}
+                                tasks={filteredTasks}
+                                onDateSelect={handleDateSelect}
+                            />
+                        )}
+                        {viewMode === 'year' && (
+                            <YearView
+                                currentDate={currentDate}
+                                tasks={filteredTasks}
+                                onMonthSelect={(date) => {
+                                    setCurrentDate(date);
+                                    setViewMode('month');
+                                }}
+                            />
+                        )}
+                    </div>
                 </main>
             </div>
 

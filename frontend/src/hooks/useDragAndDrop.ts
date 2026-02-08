@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState, useCallback } from 'react';
 import {
     DndContext,
@@ -20,6 +21,15 @@ interface UseDragAndDropProps {
 }
 
 export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDropProps) {
+=======
+import { useSensor, useSensors, PointerSensor, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
+import { useState } from 'react';
+import type { Task, CategoryId } from '../types/calendar';
+
+export function useDragAndDrop(
+    moveTask: (id: string, newStartTime: Date, newCategory?: CategoryId) => void
+) {
+>>>>>>> abeb5dfc8d77bb1c827f249bf92a96dfb9e7dad3
     const [activeId, setActiveId] = useState<string | null>(null);
     const [activeTask, setActiveTask] = useState<Task | null>(null);
     const [activeTemplate, setActiveTemplate] = useState<TaskTemplate | null>(null);
@@ -62,8 +72,16 @@ export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDr
         }
     }, [tasks]);
 
+<<<<<<< HEAD
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over, delta } = event;
+=======
+        setActiveId(active.id as string);
+    };
+
+    const handleDragEnd = (event: DragEndEvent, resizeTaskFn?: (id: string, duration: number) => void) => {
+        const { delta } = event;
+>>>>>>> abeb5dfc8d77bb1c827f249bf92a96dfb9e7dad3
 
         if (!over) {
             setActiveId(null);
@@ -72,11 +90,21 @@ export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDr
             return;
         }
 
+<<<<<<< HEAD
         const overData = over.data.current as {
             type: string;
             date?: Date;
             category?: string
         } | undefined;
+=======
+            resizeTaskFn(resizeTaskState.id, newDuration);
+        } else if (event.over && !isResizing) {
+            const parts = (event.over.id as string).split('|');
+            if (parts.length === 4) {
+                const [dayStr, category, hourStr, minuteStr] = parts;
+                const hour = parseInt(hourStr);
+                const minute = parseInt(minuteStr);
+>>>>>>> abeb5dfc8d77bb1c827f249bf92a96dfb9e7dad3
 
         if (overData?.type === 'calendar-cell' && overData.date) {
             // Handle template drop (create new task)
@@ -85,6 +113,7 @@ export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDr
                 const pixelsPerMinute = 60 / 60; // hourHeight / 60 minutes
                 const minutesDelta = Math.round((delta.y * pixelsPerMinute) / 30) * 30; // Snap to 30min
 
+<<<<<<< HEAD
                 const newStartTime = new Date(overData.date);
                 const newMinutes = Math.max(6 * 60, Math.min(23 * 60, 6 * 60 + minutesDelta)); // Default 6am + delta, clamp 6am-11pm
 
@@ -111,6 +140,9 @@ export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDr
                     newStartTime,
                     overData.category || activeTask.category
                 );
+=======
+                moveTask(event.active.id as string, newDate, category as CategoryId);
+>>>>>>> abeb5dfc8d77bb1c827f249bf92a96dfb9e7dad3
             }
         }
 

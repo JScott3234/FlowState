@@ -7,11 +7,17 @@ import { SmoothDraggableTask } from './SmoothDraggableTask';
 import { cn } from '../../lib/utils';
 import type { TaskTemplate } from '../../data/templates';
 
+<<<<<<< HEAD
 interface CalendarGridProps {
     tasks: Task[];
     onTaskMove: (taskId: string, newStartTime: Date, newCategory: string) => void;
     onTaskCreate?: (template: TaskTemplate, startTime: Date, category: string) => void;
 }
+=======
+const CalendarGrid: React.FC = () => {
+    const { tasks, moveTask, resizeTask } = useCalendarState();
+    const { sensors, handleDragStart, handleDragEnd: coreHandleDragEnd, activeId } = useDragAndDrop(moveTask);
+>>>>>>> abeb5dfc8d77bb1c827f249bf92a96dfb9e7dad3
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({ tasks, onTaskMove, onTaskCreate }) => {
     const { sensors, activeTask, activeTemplate, handleDragStart, handleDragEnd } = useDragAndDrop({

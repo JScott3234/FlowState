@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState, useCallback } from 'react';
 import Header from './components/layout/Header';
 import { CalendarGrid } from './components/calendar/CalendarGrid';
@@ -6,6 +7,12 @@ import { MOCK_TASKS } from './data/mock-tasks';
 import type { Task, CategoryId } from './types/calendarTypes';
 import { CATEGORIES } from './types/calendarTypes';
 import type { TaskTemplate } from './data/templates';
+=======
+//import React from 'react';
+import { Outlet } from 'react-router-dom';
+import Header from './components/layout/Header';
+//import CalendarGrid from './components/calendar/CalendarGrid';
+>>>>>>> abeb5dfc8d77bb1c827f249bf92a96dfb9e7dad3
 
 function App() {
   const [tasks, setTasks] = useState<Task[]>(MOCK_TASKS);
@@ -76,12 +83,19 @@ function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30">
       <div className="max-w-[1600px] mx-auto p-4 flex flex-col h-screen overflow-hidden">
         <Header />
+<<<<<<< HEAD
         <div className="flex-1 mt-4 flex gap-4 overflow-hidden">
           <TaskSidebar recentTasks={recentTasks} onCreateTask={handleCreateTask} />
           <main className="flex-1 overflow-hidden relative glass-panel rounded-2xl">
             <CalendarGrid tasks={tasks} onTaskMove={handleTaskMove} onTaskCreate={handleTaskCreateFromTemplate} />
           </main>
         </div>
+=======
+        <main className="flex-1 mt-4 overflow-hidden relative glass-panel rounded-2xl">
+          {/*<CalendarGrid />*/}
+          <Outlet />
+        </main>
+>>>>>>> abeb5dfc8d77bb1c827f249bf92a96dfb9e7dad3
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Task, CategoryId } from '../../types/calendar';
+import type { Task, CategoryId } from '../../types/calendarTypes';
 import { SmoothDraggableTask } from './SmoothDraggableTask';
 import { SnapGrid } from './SnapGrid';
 

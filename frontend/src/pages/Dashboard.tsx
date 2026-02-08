@@ -45,7 +45,7 @@ export const Dashboard = () => {
         onTaskMove: moveTask,
         onTaskCreate: (template, startTime, category) => {
             addTask({
-                id: `temp-${Date.now()}`,
+                id: window.crypto.randomUUID(),
                 title: template.title,
                 category: category as CategoryId,
                 startTime,
@@ -142,7 +142,7 @@ export const Dashboard = () => {
                     endTime.setMinutes(endTime.getMinutes() + duration);
 
                     addTask({
-                        id: `task-${Date.now()}`, // Temporary ID
+                        id: window.crypto.randomUUID(),
                         title,
                         category,
                         startTime,

@@ -38,5 +38,5 @@ export const DayCell: React.FC<DayCellProps> = ({
 function getYPosition(date: Date): number {
     const hour = date.getHours();
     const minute = date.getMinutes();
-    return ((hour - 6) + minute / 60) * 60;
+    return (hour + minute / 60) * 60;
 }

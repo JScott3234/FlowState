@@ -65,12 +65,12 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                 <div className="flex flex-1 overflow-auto">
                     {/* Time Labels */}
                     <div className="w-20 flex-shrink-0 border-r border-white/10 bg-slate-900/30">
-                        {Array.from({ length: 18 }, (_, i) => i + 6).map((hour) => (
+                        {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
                             <div
                                 key={hour}
-                                className="h-[60px] text-xs text-slate-500 text-right pr-3 pt-1 font-medium"
+                                className="h-[60px] text-xs text-slate-500 text-right pr-3 pt-1 font-medium transform -translate-y-2"
                             >
-                                {hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+                                {hour === 0 ? '12 AM' : hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
                             </div>
                         ))}
                     </div>

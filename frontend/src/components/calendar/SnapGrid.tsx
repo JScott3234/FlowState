@@ -23,14 +23,14 @@ export const SnapGrid: React.FC<SnapGridProps> = ({
         },
     });
 
-    // Generate snap lines for visual feedback
-    const snapLines = Array.from({ length: 34 }, (_, i) => i);
+    // Generate snap lines for visual feedback (15 min intervals: 24h * 4 = 96 lines + 1 at the end)
+    const snapLines = Array.from({ length: 97 }, (_, i) => i);
 
     return (
         <div
             ref={setNodeRef}
             className={cn(
-                "relative h-[720px] w-full",
+                "relative h-[1440px] w-full",
                 "transition-colors duration-200",
                 "bg-slate-950/20", // Default background to ensure drop zone is visible/interactive
                 isOver && "bg-white/10"

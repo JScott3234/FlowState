@@ -1,75 +1,129 @@
-import { useSensor, useSensors, PointerSensor, DndContext, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
-import { useState } from 'react';
-import type { Task, CategoryId } from '../types/calendar';
+import { useState, useCallback } from 'react';
+import {
+    DndContext,
+    DragOverlay,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    MouseSensor,
+    TouchSensor,
+    type DragStartEvent,
+    type DragEndEvent
+} from '@dnd-kit/core';
+import type { Task } from '../types/calendarTypes';
+import type { TaskTemplate } from '../data/templates';
 
-export function useDragAndDrop(
-    moveTask: (id: string, newStartTime: Date, newCategory?: CategoryId) => void,
-    tasks: Task[]
-) {
+interface UseDragAndDropProps {
+    tasks: Task[];
+    onTaskMove: (taskId: string, newStartTime: Date, newCategory: string) => void;
+    onTaskCreate?: (template: TaskTemplate, startTime: Date, category: string) => void;
+}
+
+export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDropProps) {
     const [activeId, setActiveId] = useState<string | null>(null);
-    const [resizeTaskState, setResizeTaskState] = useState<{ id: string; duration: number } | null>(null);
-    const [isResizing, setIsResizing] = useState(false);
+    const [activeTask, setActiveTask] = useState<Task | null>(null);
+    const [activeTemplate, setActiveTemplate] = useState<TaskTemplate | null>(null);
 
+    // Use mouse sensor with distance constraint to prevent accidental drags
     const sensors = useSensors(
+        useSensor(MouseSensor, {
+            activationConstraint: {
+                distance: 5, // Must move 5px before drag starts
+            },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 250, // Touch and hold for 250ms
+                tolerance: 5,
+            },
+        }),
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 8,
+                distance: 5,
             },
         })
     );
 
-    const handleDragStart = (event: DragStartEvent) => {
+    const handleDragStart = useCallback((event: DragStartEvent) => {
         const { active } = event;
-        const task = (active.data.current as any)?.task as Task;
+        const data = active.data.current as { type?: string; task?: Task; template?: TaskTemplate };
 
-        // Check if resize handle was clicked
-        const target = (event.activatorEvent as Event)?.target as HTMLElement;
-        const isResizeHandle = target?.closest?.('.resize-handle') || target?.getAttribute('data-resize-handle');
-
-        if (isResizeHandle) {
-            setIsResizing(true);
-            if (task) {
-                setResizeTaskState({ id: task.id, duration: task.duration });
-            }
+        if (data?.type === 'template' && data.template) {
+            setActiveId(active.id as string);
+            setActiveTemplate(data.template);
         } else {
-            setIsResizing(false);
+            const taskId = active.id as string;
+            const task = tasks.find(t => t.id === taskId);
+
+            if (task) {
+                setActiveId(taskId);
+                setActiveTask(task);
+            }
         }
+    }, [tasks]);
 
-        setActiveId(active.id as string);
-    };
-
-    const handleDragEnd = (event: DragEndEvent, resizeTaskFn?: (id: string, duration: number) => void) => {
+    const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over, delta } = event;
 
-        if (isResizing && resizeTaskFn && resizeTaskState) {
-            const minutesDelta = delta.y * (30 / 40);
-            const snappedDelta = Math.round(minutesDelta / 30) * 30;
-            const newDuration = Math.max(30, resizeTaskState.duration + snappedDelta);
+        if (!over) {
+            setActiveId(null);
+            setActiveTask(null);
+            setActiveTemplate(null);
+            return;
+        }
 
-            resizeTaskFn(resizeTaskState.id, newDuration);
-        } else if (over && !isResizing) {
-            const parts = (over.id as string).split('|');
-            if (parts.length === 4) {
-                const [dayStr, category, hourStr, minuteStr] = parts;
-                const hour = parseInt(hourStr);
-                const minute = parseInt(minuteStr);
+        const overData = over.data.current as {
+            type: string;
+            date?: Date;
+            category?: string
+        } | undefined;
 
-                const newDate = new Date(dayStr);
-                newDate.setHours(hour);
-                newDate.setMinutes(minute);
+        if (overData?.type === 'calendar-cell' && overData.date) {
+            // Handle template drop (create new task)
+            if (activeTemplate && onTaskCreate) {
+                // Calculate time based on drop position
+                const pixelsPerMinute = 60 / 60; // hourHeight / 60 minutes
+                const minutesDelta = Math.round((delta.y * pixelsPerMinute) / 30) * 30; // Snap to 30min
 
-                moveTask(active.id as string, newDate, category as CategoryId);
+                const newStartTime = new Date(overData.date);
+                const newMinutes = Math.max(6 * 60, Math.min(23 * 60, 6 * 60 + minutesDelta)); // Default 6am + delta, clamp 6am-11pm
+
+                newStartTime.setHours(Math.floor(newMinutes / 60));
+                newStartTime.setMinutes(newMinutes % 60);
+
+                onTaskCreate(activeTemplate, newStartTime, overData.category || activeTemplate.category);
+            }
+            // Handle existing task move
+            else if (activeTask) {
+                // Calculate new time based on drag delta
+                const pixelsPerMinute = 60 / 60; // hourHeight / 60 minutes
+                const minutesDelta = Math.round((delta.y * pixelsPerMinute) / 30) * 30; // Snap to 30min
+
+                const newStartTime = new Date(overData.date);
+                const currentMinutes = activeTask.startTime.getHours() * 60 + activeTask.startTime.getMinutes();
+                const newMinutes = Math.max(6 * 60, Math.min(23 * 60, currentMinutes + minutesDelta)); // Clamp 6am-11pm
+
+                newStartTime.setHours(Math.floor(newMinutes / 60));
+                newStartTime.setMinutes(newMinutes % 60);
+
+                onTaskMove(
+                    active.id as string,
+                    newStartTime,
+                    overData.category || activeTask.category
+                );
             }
         }
 
         setActiveId(null);
-        setIsResizing(false);
-        setResizeTaskState(null);
-    };
+        setActiveTask(null);
+        setActiveTemplate(null);
+    }, [activeTask, activeTemplate, onTaskMove, onTaskCreate]);
 
     return {
         sensors,
         activeId,
+        activeTask,
+        activeTemplate,
         handleDragStart,
         handleDragEnd,
     };

@@ -1,29 +1,45 @@
 import React from 'react';
-import { format, addDays, startOfWeek, eachDayOfInterval } from 'date-fns';
-import { CATEGORIES } from '../../types/calendar';
-import { useCalendarState } from '../../hooks/useCalendarState';
+import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { useDragAndDrop } from '../../hooks/useDragAndDrop';
-import { DndContext, DragOverlay } from '@dnd-kit/core';
-import DayCell from './DayCell';
-import DraggableTask from './DraggableTask';
-import { createPortal } from 'react-dom';
+import { DayCell } from './DayCell';
+import { type Task, type CategoryId, CATEGORIES } from '../../types/calendarTypes';
+import { SmoothDraggableTask } from './SmoothDraggableTask';
+import { cn } from '../../lib/utils';
+import type { TaskTemplate } from '../../data/templates';
 
-const CalendarGrid: React.FC = () => {
-    const { tasks, moveTask, resizeTask } = useCalendarState();
-    const { sensors, handleDragStart, handleDragEnd: coreHandleDragEnd, activeId } = useDragAndDrop(moveTask, tasks);
+interface CalendarGridProps {
+    tasks: Task[];
+    onTaskMove: (taskId: string, newStartTime: Date, newCategory: string) => void;
+    onTaskCreate?: (template: TaskTemplate, startTime: Date, category: string) => void;
+}
 
-    // Date Logic
+export const CalendarGrid: React.FC<CalendarGridProps> = ({ tasks, onTaskMove, onTaskCreate }) => {
+    const { sensors, activeTask, activeTemplate, handleDragStart, handleDragEnd } = useDragAndDrop({
+        tasks,
+        onTaskMove,
+        onTaskCreate
+    });
+
+    // Get current week
     const today = new Date();
-    const start = startOfWeek(today, { weekStartsOn: 1 });
-    const end = addDays(start, 6);
-    const days = eachDayOfInterval({ start, end });
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay());
 
-    const handleDragEnd = (event: any) => {
-        coreHandleDragEnd(event, resizeTask);
+    const days = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        return d;
+    });
+
+    const dropAnimation = {
+        sideEffects: defaultDropAnimationSideEffects({
+            styles: {
+                active: {
+                    opacity: '0.5',
+                },
+            },
+        }),
     };
-
-    // Helper to find active task for overlay
-    const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
     return (
         <DndContext
@@ -31,72 +47,92 @@ const CalendarGrid: React.FC = () => {
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
         >
-            <div className="flex flex-col h-full select-none">
-                {/* Header: Days */}
-                <div className="flex border-b border-white/10 bg-black/20 sticky top-0 z-20 backdrop-blur-md">
-                    <div className="w-24 shrink-0 border-r border-white/10 p-4 font-bold text-slate-400 flex items-center justify-center">
-                        Category
+            <div className="flex flex-col h-full bg-slate-950 text-slate-100">
+                {/* Header */}
+                <div className="flex border-b border-white/10 bg-slate-900/50">
+                    <div className="w-20 p-3 text-xs font-medium text-slate-400">Time</div>
+                    {days.map((day) => (
+                        <div
+                            key={day.toISOString()}
+                            className={cn(
+                                "flex-1 p-3 text-center border-l border-white/10",
+                                isToday(day) && "bg-blue-500/10"
+                            )}
+                        >
+                            <div className="text-xs text-slate-400 uppercase">
+                                {day.toLocaleDateString('en-US', { weekday: 'short' })}
+                            </div>
+                            <div className={cn(
+                                "text-lg font-bold",
+                                isToday(day) ? "text-blue-400" : "text-slate-200"
+                            )}>
+                                {day.getDate()}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Calendar Body */}
+                <div className="flex flex-1 overflow-auto">
+                    {/* Time Labels */}
+                    <div className="w-20 flex-shrink-0 border-r border-white/10 bg-slate-900/30">
+                        {Array.from({ length: 18 }, (_, i) => i + 6).map((hour) => (
+                            <div
+                                key={hour}
+                                className="h-[60px] text-xs text-slate-500 text-right pr-3 pt-1 font-medium"
+                            >
+                                {hour === 12 ? '12 PM' : hour > 12 ? `${hour - 12} PM` : `${hour} AM`}
+                            </div>
+                        ))}
                     </div>
-                    <div className="flex-1 grid grid-cols-7 divide-x divide-white/5">
+
+                    {/* Days */}
+                    <div className="flex flex-1 min-w-[800px]">
                         {days.map((day) => (
-                            <div key={day.toISOString()} className="p-3 text-center">
-                                <div className="text-xs font-medium text-slate-500 uppercase">{format(day, 'EEE')}</div>
-                                <div className={`text-xl font-bold ${format(day, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd') ? 'text-blue-400' : 'text-slate-300'}`}>
-                                    {format(day, 'd')}
+                            <div key={day.toISOString()} className="flex flex-1 flex-col">
+                                {/* Category Rows */}
+                                <div className="flex flex-col flex-1">
+                                    {CATEGORIES.map((cat) => (
+                                        <div
+                                            key={cat.id}
+                                            className="flex-1 border-b border-white/5 last:border-b-0"
+                                            style={{
+                                                backgroundColor: `${cat.color}05`
+                                            }}
+                                        >
+                                            <DayCell
+                                                date={day}
+                                                category={cat.id as CategoryId}
+                                                tasks={tasks.filter(t =>
+                                                    isSameDay(t.startTime, day) && t.category === cat.id
+                                                )}
+                                                color={cat.color}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
-
-                {/* Body: Categories -> Days */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                    {CATEGORIES.map((category) => (
-                        <div key={category.id} className="flex border-b border-white/5 min-h-[400px]">
-                            {/* Category Label */}
-                            <div
-                                className="w-24 shrink-0 border-r border-white/10 p-4 font-semibold text-slate-400 flex items-center justify-center writing-mode-vertical rotate-180 sticky left-0 bg-slate-950/95 z-10"
-                                style={{ color: category.color }}
-                            >
-                                <span className="rotate-90 whitespace-nowrap">{category.label}</span>
-                            </div>
-
-                            {/* Days Grid for this Category */}
-                            <div className="flex-1 grid grid-cols-7 divide-x divide-white/5 relative">
-                                {days.map((day) => (
-                                    <DayCell
-                                        key={day.toISOString()}
-                                        day={day}
-                                        category={category.id}
-                                        tasks={tasks.filter(t =>
-                                            t.category === category.id &&
-                                            format(t.startTime, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd')
-                                        )}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
             </div>
 
-            {/* Drag Overlay */}
-            {createPortal(
-                <DragOverlay>
-                    {activeTask ? (
-                        <div className="opacity-90 transform scale-105" style={{ height: `${activeTask.duration * (40 / 30)}px` }}>
-                            <DraggableTask task={activeTask} />
-                            {/* Note: DraggableTask might have absolute positioning styles that conflict. 
-                                Ideally, we render a pure visual component here. 
-                                But reusing DraggableTask is okay if we override styles.
-                            */}
-                        </div>
-                    ) : null}
-                </DragOverlay>,
-                document.body
-            )}
+            {/* Drag Overlay - This creates the smooth floating effect */}
+            <DragOverlay dropAnimation={dropAnimation}>
+                {activeTask ? (
+                    <div style={{ width: '200px' }}>
+                        <SmoothDraggableTask task={activeTask} isOverlay />
+                    </div>
+                ) : null}
+            </DragOverlay>
         </DndContext>
     );
 };
 
-export default CalendarGrid;
+function isToday(date: Date): boolean {
+    return isSameDay(date, new Date());
+}
+
+function isSameDay(d1: Date, d2: Date): boolean {
+    return d1.toDateString() === d2.toDateString();
+}

@@ -4,8 +4,8 @@ import websockets
 import httpx
 
 async def test_flowbot_pipeline():
-    base_url = "http://localhost:8001"
-    ws_url = "ws://localhost:8001/ws"
+    base_url = "http://localhost:8000"
+    ws_url = "ws://localhost:8000/ws"
     socket_id = "test_flowbot_socket"
     user_id = "ricardomulino@gmail.com"
     

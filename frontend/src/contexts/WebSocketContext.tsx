@@ -29,7 +29,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const socketRef = useRef<WebSocket | null>(null);
 
     useEffect(() => {
-        const baseWsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8001/ws';
+        const baseWsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws';
         const wsUrl = `${baseWsUrl}/${socketId}`;
         console.log('Connecting to WebSocket:', wsUrl);
         const socket = new WebSocket(wsUrl);

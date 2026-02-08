@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { CalendarProvider } from './contexts/CalendarContext.tsx'
 import { ProtectedRoute } from './components/ProtectedRoute.tsx'
+import { WebSocketProvider } from './contexts/WebSocketContext.tsx'
 
 import { Dashboard } from './pages/Dashboard.tsx'
 import { Tags } from './pages/Tags.tsx'
@@ -104,7 +105,7 @@ const router = createBrowserRouter([
   }
 ]);
 
-// import { WebSocketProvider } from './contexts/WebSocketContext.tsx'
+
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

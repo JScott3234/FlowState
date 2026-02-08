@@ -22,7 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Function to ensure user exists in MongoDB and has default tags
         const syncUserWithBackend = async (userEmail: string) => {
             try {
-                const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
+                const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
                 await fetch(`${apiBase}/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },

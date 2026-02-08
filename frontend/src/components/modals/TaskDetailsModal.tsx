@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Calendar as CalendarIcon, Tag, AlignLeft, Repeat, Trash2 } from 'lucide-react';
+import { X, Clock, Calendar as CalendarIcon, Tag, AlignLeft, Repeat, Trash2, CheckSquare, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CATEGORIES, type CategoryId, type Task } from '../../types/calendarTypes';
 
@@ -29,6 +29,8 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     const [date, setDate] = useState(safeDate.toISOString().split('T')[0]);
     const [time, setTime] = useState(safeDate.toTimeString().slice(0, 5));
     const [duration, setDuration] = useState(task.duration || 30);
+    const [actualDuration, setActualDuration] = useState<number | ''>(task.actualDuration || '');
+    const [isCompleted, setIsCompleted] = useState(task.isCompleted || false);
     const [recurrence, setRecurrence] = useState(task.recurrence || 'none');
     const [tagsInput, setTagsInput] = useState((task.tagNames || []).join(', '));
     const [category, setCategory] = useState<CategoryId>(task.category);
@@ -43,6 +45,8 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             setDate(sDate.toISOString().split('T')[0]);
             setTime(sDate.toTimeString().slice(0, 5));
             setDuration(task.duration || 30);
+            setActualDuration(task.actualDuration || '');
+            setIsCompleted(task.isCompleted || false);
             setRecurrence(task.recurrence || 'none');
             setTagsInput((task.tagNames || []).join(', '));
             setCategory(task.category);
@@ -65,6 +69,9 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             startTime,
             endTime,
             duration,
+            // Only save actualDuration if it's a number and task is completed
+            actualDuration: isCompleted && typeof actualDuration === 'number' ? actualDuration : undefined,
+            isCompleted,
             recurrence: recurrence === 'none' ? undefined : recurrence,
             tagNames,
             category
@@ -102,7 +109,16 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                         >
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-white">Edit Task</h2>
-                                <div className="flex gap-2">
+                                <div className="flex items-center gap-2">
+                                    {/* FLO-BOT WIDGET PLACEHOLDER */}
+                                    <button
+                                        type="button"
+                                        className="p-1 px-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1.5 text-xs font-medium border border-purple-500/20"
+                                        title="FloBot - AI Assistant (Coming Soon)"
+                                    >
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>FloBot</span>
+                                    </button>
                                     <button onClick={handleDelete} className="p-1 text-red-400 hover:text-red-300 transition-colors">
                                         <Trash2 className="w-5 h-5" />
                                     </button>
@@ -167,7 +183,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                                 {/* Duration & Category */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-1">Duration (min)</label>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Est. Duration (min)</label>
                                         <input
                                             type="number"
                                             value={duration}
@@ -190,6 +206,44 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
                                                 <option key={cat.id} value={cat.id}>{cat.label}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Completed Checkbox */}
+                                    <div className="flex items-center gap-3 bg-slate-950/30 p-3 rounded-xl border border-white/5 h-[74px] mt-1">
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                id="edit-task-completed"
+                                                checked={isCompleted}
+                                                onChange={(e) => setIsCompleted(e.target.checked)}
+                                                className="peer w-5 h-5 appearance-none rounded border border-slate-500 checked:bg-blue-500 checked:border-blue-500 transition-colors cursor-pointer"
+                                            />
+                                            <CheckSquare className="absolute inset-0 w-5 h-5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                        </div>
+                                        <label htmlFor="edit-task-completed" className="text-sm font-medium text-slate-300 cursor-pointer select-none">
+                                            Mark as Completed
+                                        </label>
+                                    </div>
+
+                                    {/* Actual Duration Input */}
+                                    <div>
+                                        <label className={`block text-sm font-medium mb-1 ${isCompleted ? 'text-slate-400' : 'text-slate-600'}`}>
+                                            Actual Duration (min)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={actualDuration}
+                                            onChange={(e) => setActualDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                                            min={0}
+                                            step={5}
+                                            disabled={!isCompleted}
+                                            placeholder={!isCompleted ? "Complete task first" : "e.g. 45"}
+                                            className={`w-full bg-slate-950/50 border rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                                                 ${!isCompleted ? 'border-white/5 text-slate-600 cursor-not-allowed placeholder:text-slate-700' : 'border-white/10'}
+                                            `}
+                                        />
                                     </div>
                                 </div>
 

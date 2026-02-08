@@ -8,6 +8,7 @@ import { CATEGORIES } from '../types/calendarTypes';
 import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
 import { SmoothDraggableTask } from '../components/calendar/SmoothDraggableTask';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ViewSwitcher, type CalendarViewMode } from '../components/calendar/ViewSwitcher';
 import { MonthView } from '../components/calendar/MonthView';
 import { YearView } from '../components/calendar/YearView';
@@ -22,12 +23,20 @@ export const Dashboard = () => {
     } = useCalendarState();
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isDragExpanded, setIsDragExpanded] = useState(false);
     const [filterCategory, setFilterCategory] = useState<CategoryId | 'all'>('all');
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
     // Calendar State
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<CalendarViewMode>('week');
+
+    // Navigation handlers
+    const navigateMonth = (direction: 'prev' | 'next') => {
+        const newDate = new Date(currentDate);
+        newDate.setMonth(newDate.getMonth() + (direction === 'next' ? 1 : -1));
+        setCurrentDate(newDate);
+    };
 
     // Get recent tasks (sorted by creation/start time, most recent first)
     const recentTasks = [...tasks]
@@ -54,10 +63,23 @@ export const Dashboard = () => {
                 color: template.color,
                 isCompleted: false,
                 estimatedTime: template.duration,
-                recurrence: template.recurrence
+                recurrence: template.recurrence,
+                actualDuration: undefined
             });
         }
     });
+
+    const onDragStart = (event: any) => {
+        handleDragStart(event);
+        if (!isSidebarOpen && event.active?.data?.current?.type === 'template') {
+            setIsDragExpanded(true);
+        }
+    };
+
+    const onDragEnd = (event: any) => {
+        handleDragEnd(event);
+        setIsDragExpanded(false);
+    };
 
     const dropAnimation = {
         sideEffects: defaultDropAnimationSideEffects({
@@ -77,14 +99,14 @@ export const Dashboard = () => {
     return (
         <DndContext
             sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
         >
             <div className="flex-1 mt-4 flex gap-4 overflow-hidden h-full">
                 <TaskSidebar
                     recentTasks={recentTasks}
                     onOpenCreateModal={() => setIsCreateModalOpen(true)}
-                    isOpen={isSidebarOpen}
+                    isOpen={isSidebarOpen || isDragExpanded}
                     onToggle={() => setIsSidebarOpen(prev => !prev)}
                     filter={filterCategory}
                     onFilterChange={setFilterCategory}
@@ -92,11 +114,25 @@ export const Dashboard = () => {
                 <main className="flex-1 overflow-hidden relative glass-panel rounded-2xl flex flex-col">
                     {/* Header Controls */}
                     <div className="flex justify-between items-center p-4 border-b border-white/5">
-                        <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
-                            {viewMode === 'year'
-                                ? currentDate.getFullYear()
-                                : currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                        </h2>
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => navigateMonth('prev')}
+                                className="p-1 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 min-w-[200px] text-center">
+                                {viewMode === 'year'
+                                    ? currentDate.getFullYear()
+                                    : currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            </h2>
+                            <button
+                                onClick={() => navigateMonth('next')}
+                                className="p-1 hover:bg-white/10 rounded-full transition-colors text-slate-400 hover:text-white"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        </div>
                         <ViewSwitcher currentView={viewMode} onViewChange={setViewMode} />
                     </div>
 
@@ -136,7 +172,7 @@ export const Dashboard = () => {
             <CreateTaskModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onSave={(title, duration, startTime, category) => {
+                onSave={(title, duration, startTime, category, description, isCompleted, actualDuration) => {
                     const categoryColor = CATEGORIES.find(c => c.id === category)?.color || '#3b82f6';
                     const endTime = new Date(startTime);
                     endTime.setMinutes(endTime.getMinutes() + duration);
@@ -144,13 +180,15 @@ export const Dashboard = () => {
                     addTask({
                         id: window.crypto.randomUUID(),
                         title,
+                        description,
                         category,
                         startTime,
                         endTime,
                         duration,
                         color: categoryColor,
-                        isCompleted: false,
+                        isCompleted,
                         estimatedTime: duration,
+                        actualDuration,
                         recurrence: undefined // or default
                     });
                     setIsCreateModalOpen(false);

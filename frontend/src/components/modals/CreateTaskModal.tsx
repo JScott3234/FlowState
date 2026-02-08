@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
-import { X, Clock, Calendar as CalendarIcon, Tag } from 'lucide-react';
+import { X, Clock, Calendar as CalendarIcon, Tag, AlignLeft, CheckSquare, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CATEGORIES, type CategoryId } from '../../types/calendarTypes';
 
 interface CreateTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (title: string, duration: number, startTime: Date, category: CategoryId) => void;
+    onSave: (title: string, duration: number, startTime: Date, category: CategoryId, description: string, isCompleted: boolean, actualDuration?: number) => void;
 }
 
 export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onSave }) => {
     const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
     const [duration, setDuration] = useState(60);
+    const [actualDuration, setActualDuration] = useState<number | ''>('');
+    const [isCompleted, setIsCompleted] = useState(false);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [time, setTime] = useState('09:00');
     const [category, setCategory] = useState<CategoryId>('work');
@@ -21,13 +24,19 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
         if (!title) return;
 
         const startTime = new Date(`${date}T${time}`);
-        onSave(title, duration, startTime, category);
+        // Only pass actualDuration if it's a number and task is completed
+        const finalActualDuration = isCompleted && typeof actualDuration === 'number' ? actualDuration : undefined;
+
+        onSave(title, duration, startTime, category, description, isCompleted, finalActualDuration);
         onClose();
 
         // Reset form slightly after close for smooth animation
         setTimeout(() => {
             setTitle('');
+            setDescription('');
             setDuration(60);
+            setActualDuration('');
+            setIsCompleted(false);
             setCategory('work');
         }, 300);
     };
@@ -55,9 +64,20 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                         >
                             <div className="flex items-center justify-between mb-6">
                                 <h2 className="text-xl font-bold text-white">New Task</h2>
-                                <button onClick={onClose} className="p-1 text-slate-400 hover:text-white transition-colors">
-                                    <X className="w-5 h-5" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {/* FLO-BOT WIDGET PLACEHOLDER */}
+                                    <button
+                                        type="button"
+                                        className="p-1 px-2 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1.5 text-xs font-medium border border-purple-500/20"
+                                        title="FloBot - AI Assistant (Coming Soon)"
+                                    >
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>FloBot</span>
+                                    </button>
+                                    <button onClick={onClose} className="p-1 text-slate-400 hover:text-white transition-colors">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-6">
@@ -71,6 +91,19 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                                         placeholder="What needs to be done?"
                                         className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                                         autoFocus
+                                    />
+                                </div>
+
+                                {/* Description Input */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
+                                        <AlignLeft className="w-4 h-4" /> Description
+                                    </label>
+                                    <textarea
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="Add details..."
+                                        className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 h-24 resize-none"
                                     />
                                 </div>
 
@@ -103,9 +136,9 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    {/* Duration Input */}
+                                    {/* Estimated Duration Input */}
                                     <div>
-                                        <label className="block text-sm font-medium text-slate-400 mb-2">Duration (min)</label>
+                                        <label className="block text-sm font-medium text-slate-400 mb-2">Est. Duration (min)</label>
                                         <input
                                             type="number"
                                             value={duration}
@@ -130,6 +163,44 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                                                 <option key={cat.id} value={cat.id}>{cat.label}</option>
                                             ))}
                                         </select>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    {/* Completed Checkbox */}
+                                    <div className="flex items-center gap-3 bg-slate-950/30 p-3 rounded-xl border border-white/5 h-[74px]">
+                                        <div className="relative flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                id="create-task-completed"
+                                                checked={isCompleted}
+                                                onChange={(e) => setIsCompleted(e.target.checked)}
+                                                className="peer w-5 h-5 appearance-none rounded border border-slate-500 checked:bg-blue-500 checked:border-blue-500 transition-colors cursor-pointer"
+                                            />
+                                            <CheckSquare className="absolute inset-0 w-5 h-5 text-white pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" />
+                                        </div>
+                                        <label htmlFor="create-task-completed" className="text-sm font-medium text-slate-300 cursor-pointer select-none">
+                                            Mark as Completed
+                                        </label>
+                                    </div>
+
+                                    {/* Actual Duration Input */}
+                                    <div>
+                                        <label className={`block text-sm font-medium mb-2 ${isCompleted ? 'text-slate-400' : 'text-slate-600'}`}>
+                                            Actual Duration (min)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={actualDuration}
+                                            onChange={(e) => setActualDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                                            min={0}
+                                            step={5}
+                                            disabled={!isCompleted}
+                                            placeholder={!isCompleted ? "Complete task first" : "e.g. 45"}
+                                            className={`w-full bg-slate-950/50 border rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                                                ${!isCompleted ? 'border-white/5 text-slate-600 cursor-not-allowed placeholder:text-slate-700' : 'border-white/10'}
+                                            `}
+                                        />
                                     </div>
                                 </div>
 

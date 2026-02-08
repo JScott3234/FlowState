@@ -17,6 +17,7 @@ export interface Task {
     color: string;
     isCompleted: boolean;
     estimatedTime: number;
+    actualDuration?: number;
     recurrence?: string;
     tagNames?: string[];
 }

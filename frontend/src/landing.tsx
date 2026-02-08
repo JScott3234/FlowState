@@ -18,8 +18,7 @@ function Landing() {
                     <span className="text-gradient">FlowState</span>
                 </h1>
                 <p className="text-slate-400 mb-8 text-lg font-light leading-relaxed">
-                    Capture your thoughts with clarity. <br />
-                    Secure, simple, and beautiful.
+                    Think, Plan, Execute
                 </p>
 
                 <button

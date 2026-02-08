@@ -49,55 +49,46 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                 !isOpen && "p-2 items-center"
             )}>
                 {/* Content Container */}
-                <div className={cn("flex flex-col h-full gap-6", !isOpen && "items-center w-full")}>
+                <div className={cn("flex flex-col h-full gap-4", !isOpen && "items-center w-full")}>
 
-                    {/* Templates Section */}
-                    <div className="flex-shrink-0 flex flex-col overflow-hidden max-h-[40%] w-full">
-                        {isOpen ? (
-                            <>
-                                <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-4 flex items-center justify-between px-1">
-                                    <span>Task Templates</span>
-                                </h2>
-                                <div className="flex flex-col gap-3 overflow-y-auto pr-2 scrollbar-hide flex-1">
-                                    {TASK_TEMPLATES.map((template) => (
-                                        <DraggableTemplate key={template.id} template={template} />
-                                    ))}
-                                </div>
-                            </>
-                        ) : (
-                            <div className="mt-12 flex flex-col gap-4 items-center w-full">
-                                {/* Icons only for collapsed state could go here */}
-                            </div>
-                        )}
-                    </div>
+                    {/* Filter Section - Moved to Top */}
+                    <div className="flex-shrink-0 w-full px-1 z-10 transition-all duration-300">
+                        {/* Filter Header / Toggle */}
+                        <div className={cn("flex items-center gap-2 mb-2", !isOpen && "justify-center")}>
+                            <button
+                                onClick={() => {
+                                    if (!isOpen) onToggle();
+                                    setIsFilterExpanded(!isFilterExpanded);
+                                }}
+                                className={cn(
+                                    "p-2 rounded-lg transition-colors flex items-center gap-2 text-slate-400 hover:text-white",
+                                    (isFilterExpanded && isOpen) ? "bg-white/10 text-white" : "hover:bg-white/5"
+                                )}
+                                title={!isOpen ? "Expand to Filter" : "Toggle Filters"}
+                            >
+                                <Filter className="w-4 h-4" />
+                                {isOpen && (
+                                    <>
+                                        <span className="text-xs font-bold uppercase tracking-wider">Filters</span>
+                                        <motion.div animate={{ rotate: isFilterExpanded ? 180 : 0 }}>
+                                            <ChevronRight className="w-3 h-3" />
+                                        </motion.div>
+                                    </>
+                                )}
+                            </button>
+                        </div>
 
-                    {/* Filter Section */}
-                    {isOpen && (
-                        <div className="flex-shrink-0 w-full px-1">
-                            <div className="flex items-center justify-between mb-2">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <Filter className="w-4 h-4" />
-                                    <span className="text-xs uppercase font-bold tracking-wider">Filters</span>
-                                </div>
-                                <button
-                                    onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                                    className="p-1 hover:bg-white/10 rounded-md transition-colors text-slate-400 hover:text-white"
-                                >
-                                    <motion.div animate={{ rotate: isFilterExpanded ? 180 : 0 }}>
-                                        <ChevronRight className="w-4 h-4" />
-                                    </motion.div>
-                                </button>
-                            </div>
-
+                        {isOpen && (
                             <motion.div
                                 initial={false}
                                 animate={{
                                     height: isFilterExpanded ? 'auto' : 0,
-                                    opacity: isFilterExpanded ? 1 : 0
+                                    opacity: isFilterExpanded ? 1 : 0,
+                                    marginBottom: isFilterExpanded ? 12 : 0
                                 }}
                                 className="overflow-hidden"
                             >
-                                <div className="flex flex-wrap gap-2 pb-2">
+                                <div className="flex flex-wrap gap-2 pb-2 pl-1">
                                     <FilterChip
                                         label="All"
                                         active={filter === 'all'}
@@ -114,26 +105,59 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                                     ))}
                                 </div>
                             </motion.div>
-                        </div>
-                    )}
+                        )}
+                    </div>
+
+                    {/* Templates Section */}
+                    <div className="flex-shrink-0 flex flex-col overflow-hidden max-h-[45%] w-full">
+                        {isOpen ? (
+                            <>
+                                <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 mb-4 flex items-center justify-between px-1">
+                                    <span>Task Templates</span>
+                                </h2>
+                                <div className="flex flex-col gap-3 overflow-y-auto pr-2 scrollbar-hide flex-1">
+                                    {TASK_TEMPLATES.map((template) => (
+                                        <DraggableTemplate key={template.id} template={template} showLabel={true} />
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex flex-col gap-3 items-center w-full pt-4 overflow-y-auto scrollbar-hide">
+                                {TASK_TEMPLATES.map((template) => (
+                                    <DraggableTemplate key={template.id} template={template} showLabel={false} />
+                                ))}
+                            </div>
+                        )}
+                    </div>
 
 
                     {/* Recent Tasks */}
                     <div className="flex-1 overflow-hidden flex flex-col w-full">
                         {isOpen && <h2 className="text-lg font-semibold text-slate-300 mb-4 px-1">Recent Tasks</h2>}
-                        <div className={cn("flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide w-full", !isOpen && "hidden")}>
+                        <div className={cn("flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide w-full", !isOpen && "flex flex-col items-center pt-4 gap-2")}>
                             {recentTasks.map((task) => (
-                                <div key={task.id} className="p-3 rounded-lg bg-white/5 border border-white/5 text-sm">
-                                    <div className="font-medium text-slate-200">{task.title}</div>
-                                    <div className="flex justify-between mt-2 text-xs text-slate-500">
-                                        <span>{task.category}</span>
-                                        <span>{task.duration}m</span>
+                                isOpen ? (
+                                    <div key={task.id} className="p-3 rounded-lg bg-white/5 border border-white/5 text-sm group hover:border-white/20 transition-colors">
+                                        <div className="font-medium text-slate-200">{task.title}</div>
+                                        <div className="flex justify-between mt-2 text-xs text-slate-500">
+                                            <span style={{ color: task.color }}>{task.category}</span>
+                                            <span>{task.duration}m</span>
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div
+                                        key={task.id}
+                                        className="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center hover:scale-110 transition-transform cursor-pointer relative group"
+                                        style={{ backgroundColor: `${task.color}20`, borderColor: task.color }}
+                                        title={task.title}
+                                    >
+                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: task.color }} />
+                                    </div>
+                                )
                             ))}
                             {recentTasks.length === 0 && (
                                 <div className="text-sm text-slate-600 text-center py-4">
-                                    No recent tasks
+                                    {isOpen ? "No recent tasks" : "-"}
                                 </div>
                             )}
                         </div>
@@ -180,7 +204,7 @@ const FilterChip = ({ label, active, onClick, color }: { label: string, active: 
     </button>
 );
 
-const DraggableTemplate = ({ template }: { template: TaskTemplate }) => {
+const DraggableTemplate = ({ template, showLabel = true }: { template: TaskTemplate, showLabel?: boolean }) => {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: template.id,
         data: {
@@ -192,6 +216,24 @@ const DraggableTemplate = ({ template }: { template: TaskTemplate }) => {
     const style = transform ? {
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     } : undefined;
+
+    if (!showLabel) {
+        return (
+            <div
+                ref={setNodeRef}
+                style={style}
+                {...listeners}
+                {...attributes}
+                className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 hover:bg-white/10 transition-all cursor-grab active:cursor-grabbing group shadow-md flex items-center justify-center"
+                title={template.title}
+            >
+                <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: template.color }}
+                />
+            </div>
+        );
+    }
 
     return (
         <div

@@ -12,7 +12,31 @@ from typing import Optional, List, Dict, Any
 from dotenv import load_dotenv
 import os
 
+# Load environment variables for embedding model
+load_dotenv()
+
 DB_NAME = "flowstate_db"
+
+# =============================================================================
+# EMBEDDING UTILITIES
+# =============================================================================
+
+def _generate_tag_embedding(tag_description: str) -> Optional[List[float]]:
+    """
+    Generates a vector embedding for a tag description using Gemini.
+    Returns None if description is empty or embedding generation fails.
+    """
+    if not tag_description or not tag_description.strip():
+        return None
+    
+    try:
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+        return embeddings.embed_query(tag_description)
+    except Exception as e:
+        print(f"Warning: Failed to generate embedding for tag: {e}")
+        return None
+
 
 # =============================================================================
 # USER OPERATIONS
@@ -113,6 +137,7 @@ def get_tag_description(client: MongoClient, email: str, tag_name: str) -> Optio
 def set_tag(client: MongoClient, email: str, tag_name: str, tag_description: Optional[str] = None) -> bool:
     """
     Creates or updates a tag. Tag description is optional.
+    Automatically generates and stores embedding if tag_description is provided.
     Returns True if the operation was successful.
     """
     db = client[DB_NAME]
@@ -121,6 +146,10 @@ def set_tag(client: MongoClient, email: str, tag_name: str, tag_description: Opt
     update_data = {"email": email, "tag_name": tag_name}
     if tag_description is not None:
         update_data["tag_description"] = tag_description
+        # Generate embedding for vector search
+        embedding = _generate_tag_embedding(tag_description)
+        if embedding is not None:
+            update_data["embedding"] = embedding
     
     result = collection.update_one(
         {"email": email, "tag_name": tag_name},
@@ -130,20 +159,29 @@ def set_tag(client: MongoClient, email: str, tag_name: str, tag_description: Opt
     return result.acknowledged
 
 
+
 def set_tag_description(client: MongoClient, email: str, tag_name: str, tag_description: str) -> bool:
     """
     Sets or updates only the description for a tag.
+    Automatically regenerates embedding for the new description.
     Returns True if the operation was successful.
     """
     db = client[DB_NAME]
     collection = db["tags"]
     
+    update_data = {"tag_description": tag_description}
+    # Regenerate embedding for vector search
+    embedding = _generate_tag_embedding(tag_description)
+    if embedding is not None:
+        update_data["embedding"] = embedding
+    
     result = collection.update_one(
         {"email": email, "tag_name": tag_name},
-        {"$set": {"tag_description": tag_description}},
+        {"$set": update_data},
         upsert=True
     )
     return result.acknowledged
+
 
 
 def delete_tag(client: MongoClient, email: str, tag_name: str) -> bool:

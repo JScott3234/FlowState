@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional, List
 from task_time_estimator import estimate_task_time
-from main import manager
+from websocket_manager import manager
 import db
 from pymongo import MongoClient
 from dotenv import load_dotenv
@@ -125,4 +125,45 @@ async def run_agent_background(
             pass
         finally:
             mongo_client.close()
+
+
+async def run_search_agent_background(
+    client_id: str,
+    user_id: str,
+    message: str
+):
+    """
+    Runs the search agent in the background and sends results via WebSocket.
+    """
+    from search_agent import build_search_agent_graph
+    from langchain_core.messages import HumanMessage
+
+    try:
+        # Notify status
+        await manager.send_personal_message({
+            "type": "flowbot_status",
+            "status": "thinking",
+            "message": "FloBot is thinking..."
+        }, client_id)
+
+        # Run agent
+        graph = build_search_agent_graph()
+        result = await asyncio.to_thread(graph.invoke, {
+            "messages": [HumanMessage(content=message)]
+        })
+        
+        response_text = result['messages'][-1].content
+
+        # Send result
+        await manager.send_personal_message({
+            "type": "flowbot_result",
+            "response": response_text
+        }, client_id)
+
+    except Exception as e:
+        print(f"Error in background search agent: {e}")
+        await manager.send_personal_message({
+            "type": "flowbot_error",
+            "error": str(e)
+        }, client_id)
 

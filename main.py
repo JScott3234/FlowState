@@ -105,6 +105,7 @@ class TaskTagRemove(BaseModel):
 class AgentChatRequest(BaseModel):
     message: str
     user_id: str
+    socket_id: Optional[str] = None
 
 
 class AgentRetrieveRequest(BaseModel):
@@ -165,31 +166,7 @@ app.add_middleware(
 # WEBSOCKET MANAGEMENT
 # ============================================================================
 
-class ConnectionManager:
-    def __init__(self):
-        # client_id -> WebSocket
-        self.active_connections: Dict[str, WebSocket] = {}
-
-    async def connect(self, websocket: WebSocket, client_id: str):
-        await websocket.accept()
-        self.active_connections[client_id] = websocket
-        print(f"WebSocket connected: {client_id}")
-
-    def disconnect(self, client_id: str):
-        if client_id in self.active_connections:
-            del self.active_connections[client_id]
-            print(f"WebSocket disconnected: {client_id}")
-
-    async def send_personal_message(self, message: dict, client_id: str):
-        if client_id in self.active_connections:
-            websocket = self.active_connections[client_id]
-            await websocket.send_json(message)
-
-    async def broadcast(self, message: dict):
-        for connection in self.active_connections.values():
-            await connection.send_json(message)
-
-manager = ConnectionManager()
+from websocket_manager import manager
 
 
 @app.websocket("/ws/{client_id}")
@@ -647,15 +624,26 @@ async def delete_task_by_id(task_id: str):
 # ============================================================================
 
 @app.post("/api/agent/chat")
-async def agent_chat(request: AgentChatRequest):
+async def agent_chat(request: AgentChatRequest, background_tasks: BackgroundTasks):
     """
     Chat with the AI agent.
     
     Integrates with search_agent.py to handle URL scraping and chat.
+    If socket_id is provided, runs in the background and sends results via WebSocket.
     """
     from search_agent import build_search_agent_graph
     from langchain_core.messages import HumanMessage
     
+    if request.socket_id:
+        from agent_utils import run_search_agent_background
+        background_tasks.add_task(
+            run_search_agent_background,
+            request.socket_id,
+            request.user_id,
+            request.message
+        )
+        return {"message": "Processing request in background", "status": "processing"}
+
     try:
         graph = build_search_agent_graph()
         result = graph.invoke({

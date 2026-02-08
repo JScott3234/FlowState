@@ -5,7 +5,7 @@
  * Uses environment variables for configurable API base URL.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001/api';
 
 // ============================================================================
 // TYPES
@@ -331,11 +331,11 @@ export const taskAPI = {
 // ============================================================================
 
 export const agentAPI = {
-    chat: async (message: string, userId: string): Promise<any> => {
+    chat: async (message: string, userId: string, socketId?: string): Promise<any> => {
         const response = await fetch(`${API_BASE}/agent/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, user_id: userId }),
+            body: JSON.stringify({ message, user_id: userId, socket_id: socketId }),
         });
         if (!response.ok) throw new Error('Failed to chat with agent');
         return response.json();

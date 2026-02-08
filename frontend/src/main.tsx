@@ -110,9 +110,11 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <AuthProvider>
-        <CalendarProvider>
-          <RouterProvider router={router} />
-        </CalendarProvider>
+        <WebSocketProvider>
+          <CalendarProvider>
+            <RouterProvider router={router} />
+          </CalendarProvider>
+        </WebSocketProvider>
       </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,

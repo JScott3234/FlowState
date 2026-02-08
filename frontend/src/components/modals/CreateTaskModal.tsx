@@ -6,11 +6,23 @@ import { type Category } from '../../types/calendarTypes';
 interface CreateTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (title: string, duration: number, startTime: Date, tag: string, description: string, isCompleted: boolean, actualDuration?: number) => void;
+    onSave: (title: string, duration: number, startTime: Date, tag: string, description: string, isCompleted: boolean, actualDuration?: number, isTemplate?: boolean, color?: string) => void;
     categories: Category[];
+    isTemplateMode?: boolean;
 }
 
-export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onSave, categories }) => {
+const COLORS = [
+    '#3b82f6', // blue
+    '#ef4444', // red
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#8b5cf6', // violet
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+    '#6366f1', // indigo
+];
+
+export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onSave, categories, isTemplateMode = false }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [duration, setDuration] = useState(60);
@@ -19,6 +31,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [time, setTime] = useState('09:00');
     const [tag, setTag] = useState<string>('work');
+    const [selectedColor, setSelectedColor] = useState(COLORS[0]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,7 +41,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
         // Only pass actualDuration if it's a number and task is completed
         const finalActualDuration = isCompleted && typeof actualDuration === 'number' ? actualDuration : undefined;
 
-        onSave(title, duration, startTime, tag, description, isCompleted, finalActualDuration);
+        onSave(title, duration, startTime, tag, description, isCompleted, finalActualDuration, isTemplateMode, selectedColor);
         onClose();
 
         // Reset form slightly after close for smooth animation
@@ -39,6 +52,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
             setActualDuration('');
             setIsCompleted(false);
             setTag('work');
+            setSelectedColor(COLORS[0]);
         }, 300);
     };
 
@@ -64,7 +78,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                             className="w-full max-w-lg bg-[#1e293b] border border-white/10 rounded-2xl shadow-2xl p-6 max-h-[90vh] overflow-y-auto"
                         >
                             <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-white">New Task</h2>
+                                <h2 className="text-xl font-bold text-white">{isTemplateMode ? 'New Template' : 'New Task'}</h2>
                                 <div className="flex items-center gap-2">
                                     {/* FLO-BOT WIDGET PLACEHOLDER */}
                                     <button
@@ -106,6 +120,25 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                                         placeholder="Add details..."
                                         className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 h-24 resize-none"
                                     />
+                                </div>
+
+                                {/* Color Picker */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-3">Task Color</label>
+                                    <div className="flex flex-wrap gap-3">
+                                        {COLORS.map((color) => (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => setSelectedColor(color)}
+                                                className={`w-8 h-8 rounded-full transition-all ${selectedColor === color
+                                                        ? 'ring-2 ring-white scale-110'
+                                                        : 'hover:scale-105 opacity-70 hover:opacity-100'
+                                                    }`}
+                                                style={{ backgroundColor: color }}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

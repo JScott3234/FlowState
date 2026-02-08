@@ -9,12 +9,13 @@ interface CalendarContextType {
     timeZone: string;
     setTimeZone: (tz: string) => void;
     tasks: Task[];
-    addTask: (task: Task) => Promise<void>;
+    addTask: (task: Task, socketId?: string) => Promise<void>;
     updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
     moveTask: (id: string, newStartTime: Date, newCategory?: CategoryId) => void;
     resizeTask: (id: string, newDuration: number) => void;
     deleteTask: (id: string) => Promise<void>;
     getTasksForDayAndCategory: (date: Date, categoryId: CategoryId) => Task[];
+    fetchTasks: () => Promise<void>;
 }
 
 const CalendarContext = createContext<CalendarContextType | undefined>(undefined);
@@ -31,7 +32,9 @@ export const CalendarProvider = ({ children }: { children: ReactNode }) => {
             setCurrentDate,
             timeZone,
             setTimeZone,
-            ...calendarState
+            ...calendarState,
+            getTasksForDayAndCategory: calendarState.getTasksForDayAndTag,
+            fetchTasks: calendarState.fetchTasks
         }}>
             {children}
         </CalendarContext.Provider>

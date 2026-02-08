@@ -11,6 +11,7 @@ export interface Task {
     taskClientId?: string; // Frontend-generated ID for matching WebSocket updates
     title: string;
     description?: string;
+    category?: string;
     startTime: Date;
     endTime: Date;
     duration: number;
@@ -25,6 +26,7 @@ export interface Task {
     aiRecommendation?: 'increase' | 'keep';
     aiReasoning?: string;
     aiConfidence?: 'high' | 'medium' | 'low';
+    isTemplate?: boolean;
 }
 
 export const CATEGORIES: Category[] = [

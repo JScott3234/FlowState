@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import { TaskSidebar } from '../components/sidebar/TaskSidebar';
 import { CreateTaskModal } from '../components/modals/CreateTaskModal';
@@ -14,6 +14,8 @@ import { MonthView } from '../components/calendar/MonthView';
 import { YearView } from '../components/calendar/YearView';
 import { useAuth } from '../contexts/AuthContext';
 import { useCalendar } from '../contexts/CalendarContext';
+import { useWebSocket } from '../contexts/WebSocketContext';
+import { addMinutes } from 'date-fns';
 
 export const Dashboard = () => {
     const { email } = useAuth();
@@ -25,6 +27,7 @@ export const Dashboard = () => {
         addTask,
         updateTask,
         moveTask,
+        resizeTask,
         deleteTask
     } = useCalendar();
 
@@ -169,6 +172,7 @@ export const Dashboard = () => {
                     filter={filterTag}
                     onFilterChange={setFilterTag}
                     categories={dynamicCategories}
+                    tasks={tasks}
                 />
                 <main className="flex-1 overflow-hidden relative glass-panel rounded-2xl flex flex-col">
                     {/* Header Controls */}
@@ -205,6 +209,7 @@ export const Dashboard = () => {
                                 onDateSelect={handleDateSelect}
                                 onTaskUpdate={updateTask}
                                 onTaskDelete={deleteTask}
+                                onTaskResize={resizeTask}
                             />
                         )}
                         {viewMode === 'month' && (
@@ -232,8 +237,10 @@ export const Dashboard = () => {
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
                 categories={dynamicCategories}
-                onSave={(title, duration, startTime, tag, description, isCompleted, actualDuration) => {
+                onSave={(title, duration, startTime, tag, description, isCompleted, actualDuration, isTemplateMode, color) => {
                     const tagColor = dynamicCategories.find(c => c.id === tag)?.color || '#3b82f6';
+                    const finalColor = color || tagColor;
+
                     const endTime = new Date(startTime);
                     endTime.setMinutes(endTime.getMinutes() + duration);
                     const clientId = window.crypto.randomUUID();
@@ -247,12 +254,13 @@ export const Dashboard = () => {
                         startTime,
                         endTime,
                         duration,
-                        color: tagColor,
+                        color: finalColor,
                         isCompleted,
                         estimatedTime: duration,
                         actualDuration,
                         recurrence: undefined,
-                        aiEstimationStatus: 'loading'
+                        aiEstimationStatus: 'loading',
+                        isTemplate: false
                     }, socketId);
                     setIsCreateModalOpen(false);
                 }}

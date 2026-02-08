@@ -28,7 +28,8 @@ export function useCalendarState(userEmail: string | null) {
                 aiTimeEstimation: t.ai_time_estimation,
                 aiRecommendation: t.ai_recommendation,
                 aiReasoning: t.ai_reasoning,
-                aiConfidence: t.ai_confidence
+                aiConfidence: t.ai_confidence,
+                isTemplate: t.is_template || false
             }));
             setTasks(formattedTasks);
         } catch (error) {
@@ -41,10 +42,19 @@ export function useCalendarState(userEmail: string | null) {
     }, [fetchTasks]);
 
     const addTask = useCallback(async (task: Task, socketId?: string) => {
-        if (!userEmail) return;
+        if (!userEmail) {
+            console.error("addTask called but userEmail is null");
+            return;
+        }
+        console.log("addTask called with:", task);
         // Optimistic update
-        setTasks((prev) => [...prev, task]);
+        setTasks((prev) => {
+            const newTasks = [...prev, task];
+            console.log("Optimistically updated tasks:", newTasks.length);
+            return newTasks;
+        });
         try {
+            console.log("Calling taskAPI.create...");
             await taskAPI.create(
                 userEmail,
                 task.title,
@@ -56,8 +66,10 @@ export function useCalendarState(userEmail: string | null) {
                 task.color,
                 task.id, // Pass task_client_id
                 socketId, // Pass socket_id
-                task.aiEstimationStatus
+                task.aiEstimationStatus,
+                task.isTemplate
             );
+            console.log("taskAPI.create succeeded, fetching tasks...");
             // Refresh to get ID (though WebSocket might beat it)
             fetchTasks();
         } catch (e) {
@@ -160,5 +172,6 @@ export function useCalendarState(userEmail: string | null) {
         resizeTask,
         deleteTask,
         getTasksForDayAndTag,
+        fetchTasks,
     };
 }

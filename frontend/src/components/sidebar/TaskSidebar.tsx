@@ -2,7 +2,7 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import { type Task, type Category } from '../../types/calendarTypes';
-import { TASK_TEMPLATES, type TaskTemplate } from '../../data/templates';
+import { type TaskTemplate } from '../../data/templates';
 import { Plus, GripVertical, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -14,6 +14,7 @@ interface TaskSidebarProps {
     filter: string | 'all';
     onFilterChange: (filter: string | 'all') => void;
     categories: Category[];
+    tasks: Task[]; // Add tasks prop
 }
 
 export const TaskSidebar: React.FC<TaskSidebarProps> = ({
@@ -23,9 +24,11 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
     onToggle,
     filter,
     onFilterChange,
-    categories
+    categories,
+    tasks
 }) => {
     const [isFilterExpanded, setIsFilterExpanded] = React.useState(false);
+    const templates = tasks.filter(t => t.isTemplate);
 
     return (
         <motion.aside
@@ -118,14 +121,19 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                                     <span>Task Templates</span>
                                 </h2>
                                 <div className="flex flex-col gap-3 overflow-y-auto pr-2 scrollbar-hide flex-1">
-                                    {TASK_TEMPLATES.map((template) => (
+                                    {templates.map((template) => (
                                         <DraggableTemplate key={template.id} template={template} showLabel={true} />
                                     ))}
+                                    {templates.length === 0 && (
+                                        <div className="text-center text-slate-500 text-xs py-4">
+                                            No templates found. Create one in Tasks page.
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         ) : (
                             <div className="flex flex-col gap-3 items-center w-full pt-4 overflow-y-auto scrollbar-hide">
-                                {TASK_TEMPLATES.map((template) => (
+                                {templates.map((template) => (
                                     <DraggableTemplate key={template.id} template={template} showLabel={false} />
                                 ))}
                             </div>
@@ -220,12 +228,16 @@ const FilterChip = ({ label, active, onClick, color }: { label: string, active: 
     </button>
 );
 
-const DraggableTemplate = ({ template, showLabel = true }: { template: TaskTemplate, showLabel?: boolean }) => {
+const DraggableTemplate = ({ template, showLabel = true }: { template: Task, showLabel?: boolean }) => {
     const { attributes, listeners, setNodeRef, transform } = useDraggable({
         id: template.id,
         data: {
-            type: 'template',
-            template,
+            type: 'task', // Change type from 'template' to 'task' so it can be dropped on calendar
+            task: {
+                ...template,
+                id: `new-${Date.now()}`, // Generate new ID
+                isTemplate: true
+            },
         },
     });
 
@@ -245,7 +257,7 @@ const DraggableTemplate = ({ template, showLabel = true }: { template: TaskTempl
             >
                 <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: template.color }}
+                    style={{ backgroundColor: template.color }} // Task has color
                 />
             </div>
         );

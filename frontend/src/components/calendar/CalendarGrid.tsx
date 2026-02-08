@@ -12,6 +12,7 @@ interface CalendarGridProps {
     onDateSelect: (date: Date) => void;
     onTaskUpdate: (taskId: string, updates: Partial<Task>) => void;
     onTaskDelete: (taskId: string) => void;
+    onTaskResize?: (taskId: string, newDuration: number) => void;
 }
 
 export const CalendarGrid: React.FC<CalendarGridProps> = ({
@@ -20,7 +21,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
     viewMode,
     onDateSelect,
     onTaskUpdate,
-    onTaskDelete
+    onTaskDelete,
+    onTaskResize
 }) => {
     const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -128,6 +130,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
                                                 tasks={tasks.filter(t => isSameDay(t.startTime, day))}
                                                 onEdit={setEditingTask}
                                                 onUpdate={onTaskUpdate}
+                                                onResize={onTaskResize}
                                             />
                                         </div>
                                     ))}

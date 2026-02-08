@@ -11,9 +11,10 @@ interface SmoothDraggableTaskProps {
     isOverlay?: boolean;
     onEdit?: (task: Task) => void;
     onUpdate?: (taskId: string, updates: Partial<Task>) => void;
+    onResize?: (taskId: string, newDuration: number) => void;
 }
 
-export const SmoothDraggableTask: React.FC<SmoothDraggableTaskProps> = ({ task, isOverlay, onEdit, onUpdate }) => {
+export const SmoothDraggableTask: React.FC<SmoothDraggableTaskProps> = ({ task, isOverlay, onEdit, onUpdate, onResize }) => {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
         id: task.id,
         data: {
@@ -26,7 +27,45 @@ export const SmoothDraggableTask: React.FC<SmoothDraggableTaskProps> = ({ task, 
         transform: CSS.Translate.toString(transform),
     };
 
-    const height = task.duration * (40 / 30);
+    const [isResizing, setIsResizing] = React.useState(false);
+    const [previewDuration, setPreviewDuration] = React.useState<number | null>(null);
+
+    const height = (previewDuration || task.duration) * (40 / 30);
+
+    const handleResizeStart = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsResizing(true);
+
+        const startY = e.clientY;
+        const startDuration = task.duration;
+
+        const handleMouseMove = (moveEvent: MouseEvent) => {
+            const deltaY = moveEvent.clientY - startY;
+            const minutesDelta = deltaY / (40 / 30);
+            const newDuration = Math.max(15, Math.round((startDuration + minutesDelta) / 15) * 15);
+            setPreviewDuration(newDuration);
+        };
+
+        const handleMouseUp = (upEvent: MouseEvent) => {
+            const deltaY = upEvent.clientY - startY;
+            const minutesDelta = deltaY / (40 / 30);
+            const newDuration = Math.max(15, Math.round((startDuration + minutesDelta) / 15) * 15);
+
+            if (onUpdate && newDuration !== startDuration) {
+                // We use onUpdate or specifically onResize?
+                // The interface has onResize now.
+                if (onResize) onResize(task.id, newDuration);
+                else if (onUpdate) onUpdate(task.id, { duration: newDuration }); // Fallback
+            }
+            setIsResizing(false);
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+    };
 
     return (
         <div
@@ -36,7 +75,7 @@ export const SmoothDraggableTask: React.FC<SmoothDraggableTaskProps> = ({ task, 
                 height: `${height}px`,
                 // If overlay, we don't want absolute positioning relative to a parent slot
                 position: isOverlay ? 'relative' : 'absolute',
-                zIndex: isDragging || isOverlay ? 50 : 10,
+                zIndex: isDragging || isOverlay || isResizing ? 50 : 10,
             }}
             {...listeners}
             {...attributes}
@@ -143,6 +182,18 @@ export const SmoothDraggableTask: React.FC<SmoothDraggableTaskProps> = ({ task, 
                 <span>{format(task.startTime, 'h:mm a')}</span>
                 <span>{task.duration}m</span>
             </div>
+
+            {/* Resize Handle */}
+            {!isOverlay && (
+                <div
+                    className="absolute bottom-0 left-0 right-0 h-3 cursor-ns-resize z-50 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-white/10 transition-opacity"
+                    onMouseDown={handleResizeStart}
+                    // Prevent drag
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    <div className="w-8 h-1 rounded-full bg-white/20" />
+                </div>
+            )}
         </div>
     );
 };

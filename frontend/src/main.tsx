@@ -9,6 +9,7 @@ import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import ErrorBoundary from './components/ErrorBoundary.tsx'
 import { AuthProvider } from './contexts/AuthContext.tsx'
 import { CalendarProvider } from './contexts/CalendarContext.tsx'
+import { WebSocketProvider } from './contexts/WebSocketContext'
 import { ProtectedRoute } from './components/ProtectedRoute.tsx'
 
 import { Dashboard } from './pages/Dashboard.tsx'
@@ -104,15 +105,17 @@ const router = createBrowserRouter([
   }
 ]);
 
-import { WebSocketProvider } from './contexts/WebSocketContext.tsx'
+
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
       <AuthProvider>
-        <CalendarProvider>
-          <RouterProvider router={router} />
-        </CalendarProvider>
+        <WebSocketProvider>
+          <CalendarProvider>
+            <RouterProvider router={router} />
+          </CalendarProvider>
+        </WebSocketProvider>
       </AuthProvider>
     </ErrorBoundary>
   </StrictMode>,

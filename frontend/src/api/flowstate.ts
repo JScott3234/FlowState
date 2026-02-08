@@ -30,6 +30,7 @@ export interface Task {
     title: string;
     description?: string;
     tag_names?: string[];
+    category?: string; // Added category
     start_time?: string;
     // end_time removed
     duration?: number;
@@ -41,6 +42,7 @@ export interface Task {
     ai_recommendation?: string;
     ai_reasoning?: string;
     ai_confidence?: string;
+    is_template?: boolean;
 }
 
 // ============================================================================
@@ -227,8 +229,11 @@ export const taskAPI = {
         color?: string,
         taskClientId?: string,
         socketId?: string,
-        aiEstimationStatus?: string
+        aiEstimationStatus?: string,
+        isTemplate?: boolean
     ): Promise<void> => {
+        const category = (tagNames && tagNames.length > 0) ? tagNames[0] : 'work';
+
         const response = await fetch(`${API_BASE}/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -238,12 +243,14 @@ export const taskAPI = {
                 task_client_id: taskClientId || crypto.randomUUID(),
                 description,
                 tag_names: tagNames,
+                category, // Derived category
                 start_time: startTime?.toISOString(),
                 // end_time removed
                 recurrence,
                 color,
                 socket_id: socketId, // Pass to backend
-                ai_estimation_status: aiEstimationStatus
+                ai_estimation_status: aiEstimationStatus,
+                is_template: isTemplate || false
             }),
         });
         if (!response.ok) throw new Error('Failed to create task');

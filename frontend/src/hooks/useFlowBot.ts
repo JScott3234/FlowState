@@ -10,7 +10,7 @@ export interface ChatMessage {
 
 export function useFlowBot() {
     const { email } = useAuth();
-    const { socketId, lastMessage } = useWebSocket();
+    const { socketId, lastMessage, isConnected } = useWebSocket();
     const [messages, setMessages] = useState<ChatMessage[]>([
         { role: 'bot', content: "Hello! I can help you organize your schedule or read web pages for you. How can I help you flow today?" }
     ]);
@@ -37,6 +37,13 @@ export function useFlowBot() {
     const sendMessage = useCallback(async (text: string) => {
         if (!text.trim() || !email) return;
 
+        // Check if WebSocket is connected
+        if (!isConnected) {
+            console.warn('WebSocket not connected, message may not receive response');
+            setMessages(prev => [...prev, { role: 'bot', content: "⚠️ Connection not ready. Please wait a moment and try again." }]);
+            return;
+        }
+
         // Add user message to UI
         const userMsg: ChatMessage = { role: 'user', content: text };
         setMessages(prev => [...prev, userMsg]);
@@ -48,7 +55,7 @@ export function useFlowBot() {
             console.error("Failed to send message to FlowBot:", error);
             setMessages(prev => [...prev, { role: 'bot', content: "Sorry, I encountered an error connecting to the agent." }]);
         }
-    }, [email, socketId]);
+    }, [email, socketId, isConnected]);
 
     const clearHistory = useCallback(() => {
         setMessages([

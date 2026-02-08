@@ -15,8 +15,8 @@ import { WebSocketProvider } from './contexts/WebSocketContext.tsx'
 import { Dashboard } from './pages/Dashboard.tsx'
 import { Tags } from './pages/Tags.tsx'
 import Dash from './dash.tsx'
-import Tasks from './tasks.tsx'
 import Settings from './settingMenu.tsx'
+import { Flow } from './pages/Flow.tsx'
 
 const router = createBrowserRouter([
   {
@@ -76,20 +76,6 @@ const router = createBrowserRouter([
     ],
   },
   {
-    path: "/tasks",
-    element: (
-      <ProtectedRoute>
-        <App />
-      </ProtectedRoute>
-    ),
-    children: [
-      {
-        index: true,
-        element: <Tasks />,
-      },
-    ],
-  },
-  {
     path: "/settings",
     element: (
       <ProtectedRoute>
@@ -100,6 +86,20 @@ const router = createBrowserRouter([
       {
         index: true,
         element: <Settings />,
+      },
+    ],
+  },
+  {
+    path: "/flow",
+    element: (
+      <ProtectedRoute>
+        <App />
+      </ProtectedRoute>
+    ),
+    children: [
+      {
+        index: true,
+        element: <Flow />,
       },
     ],
   }

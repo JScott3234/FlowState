@@ -135,10 +135,10 @@ async def run_search_agent_background(
     """
     Runs the search agent in the background and sends results via WebSocket.
     """
-    from search_agent import build_search_agent_graph
-    from langchain_core.messages import HumanMessage
-
     try:
+        from search_agent import build_search_agent_graph
+        from langchain_core.messages import HumanMessage
+
         # Notify status
         await manager.send_personal_message({
             "type": "flowbot_status",

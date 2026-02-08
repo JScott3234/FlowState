@@ -8,9 +8,13 @@ Provides getters and setters for:
 """
 
 from pymongo import MongoClient
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+from bson import ObjectId
 from dotenv import load_dotenv
 import os
+
+import agent
 
 # Load environment variables for embedding model
 load_dotenv()
@@ -216,7 +220,16 @@ def get_all_tags(client: MongoClient) -> List[Dict[str, Any]]:
 # TASKS OPERATIONS
 # =============================================================================
 
-def get_task(client: MongoClient, email: str, title: str) -> Optional[Dict[str, Any]]:
+def get_task(client: MongoClient, email: str, task_id: str) -> Optional[Dict[str, Any]]:
+    """Retrieves a specific task by email and object id."""
+    db = client[DB_NAME]
+    collection = db["tasks"]
+    try:
+        return collection.find_one({"email": email, "_id": ObjectId(task_id)})
+    except Exception:
+        return None
+
+def get_task_by_title(client: MongoClient, email: str, title: str) -> Optional[Dict[str, Any]]:
     """Retrieves a specific task by email and title."""
     db = client[DB_NAME]
     collection = db["tasks"]
@@ -231,12 +244,25 @@ def get_task_by_id(client: MongoClient, task_id: str) -> Optional[Dict[str, Any]
     return collection.find_one({"_id": ObjectId(task_id)})
 
 
-def get_task_description(client: MongoClient, email: str, title: str) -> Optional[str]:
-    """Retrieves the description for a specific task."""
+def get_task_description(client: MongoClient, email: str, identifier: str) -> Optional[str]:
+    """Retrieves the description for a specific task by ID or Title."""
     db = client[DB_NAME]
     collection = db["tasks"]
+    
+    # Try as ObjectId first
+    try:
+        result = collection.find_one(
+            {"email": email, "_id": ObjectId(identifier)}, 
+            {"description": 1}
+        )
+        if result:
+            return result.get("description")
+    except Exception:
+        pass
+        
+    # Fallback to Title
     result = collection.find_one(
-        {"email": email, "title": title}, 
+        {"email": email, "title": identifier}, 
         {"description": 1}
     )
     if result:
@@ -244,16 +270,29 @@ def get_task_description(client: MongoClient, email: str, title: str) -> Optiona
     return None
 
 
-def get_task_tags(client: MongoClient, email: str, title: str) -> Optional[List[str]]:
-    """Retrieves the tag_names list for a specific task."""
+def get_task_tags(client: MongoClient, email: str, identifier: str) -> Optional[List[str]]:
+    """Retrieves the tags for a specific task by ID or Title."""
     db = client[DB_NAME]
     collection = db["tasks"]
+    
+    # Try as ObjectId first
+    try:
+        result = collection.find_one(
+            {"email": email, "_id": ObjectId(identifier)}, 
+            {"tag_names": 1}
+        )
+        if result:
+            return result.get("tag_names")
+    except Exception:
+        pass
+
+    # Fallback to Title
     result = collection.find_one(
-        {"email": email, "title": title}, 
+        {"email": email, "title": identifier}, 
         {"tag_names": 1}
     )
     if result:
-        return result.get("tag_names", [])
+        return result.get("tag_names")
     return None
 
 
@@ -261,8 +300,15 @@ def set_task(
     client: MongoClient, 
     email: str, 
     title: str, 
+    task_client_id: str,
     description: Optional[str] = None, 
-    tag_names: Optional[List[str]] = None
+    tag_names: Optional[List[str]] = None,
+    start_time: Optional[Any] = None,
+    duration: Optional[int] = 0,
+    is_completed: bool = False,
+    flowbot_suggest_duration: Optional[int] = None,
+    actual_duration: Optional[int] = None,
+    color: Optional[str] = None
 ) -> bool:
     """
     Creates or updates a task. 
@@ -273,7 +319,13 @@ def set_task(
     db = client[DB_NAME]
     collection = db["tasks"]
     
-    update_data = {"email": email, "title": title}
+    update_data = {
+        "email": email, 
+        "title": title,
+        "task_client_id": task_client_id,
+        "is_completed": is_completed
+    }
+    
     if description is not None:
         update_data["description"] = description
     if tag_names is not None:
@@ -288,19 +340,59 @@ def set_task(
     embedding = _generate_embedding(embedding_text)
     if embedding is not None:
         update_data["embedding"] = embedding
+    if start_time is not None:
+        update_data["start_time"] = start_time
+    if duration is not None:
+        update_data["duration"] = duration
+    if flowbot_suggest_duration is not None:
+        update_data["flowbot_suggest_duration"] = flowbot_suggest_duration
+    if actual_duration is not None:
+        update_data["actual_duration"] = actual_duration
+    if color is not None:
+        update_data["color"] = color
     
     result = collection.update_one(
         {"email": email, "title": title},
         {"$set": update_data},
         upsert=True
     )
+    
     return result.acknowledged
 
 
-def set_task_description(client: MongoClient, email: str, title: str, description: str) -> bool:
+def update_task_fields(client: MongoClient, task_id: str, updates: Dict[str, Any]) -> bool:
     """
-    Sets or updates only the description for a task.
-    Returns True if the operation was successful.
+    Updates specific fields of a task using its _id.
+    """
+    from bson import ObjectId
+    db = client[DB_NAME]
+    collection = db["tasks"]
+    
+    # potentially filter out _id from updates if passed
+    if "_id" in updates:
+        del updates["_id"]
+
+    result = collection.update_one(
+        {"_id": ObjectId(task_id)},
+        {"$set": updates}
+    )
+    return result.acknowledged
+
+
+def delete_task_by_id(client: MongoClient, task_id: str) -> bool:
+    """
+    Deletes a task by its _id.
+    """
+    from bson import ObjectId
+    db = client[DB_NAME]
+    collection = db["tasks"]
+    result = collection.delete_one({"_id": ObjectId(task_id)})
+    return result.deleted_count > 0
+
+
+def set_task_description(client: MongoClient, email: str, identifier: str, description: str) -> bool:
+    """
+    Sets or updates only the description for a task by ID or Title.
     """
     db = client[DB_NAME]
     collection = db["tasks"]
@@ -308,73 +400,134 @@ def set_task_description(client: MongoClient, email: str, title: str, descriptio
     update_data = {"description": description}
     
     # Regenerate embedding since description changed
-    # Need to fetch title or just update based on new description? 
-    # Ideally should include title, but for now let's just use description if title isn't easily available 
-    # OR we could just append to the set query if we had strict consistency.
-    # To be safe and simple, let's just embed the description or try to fetch title. 
-    # For efficiency, let's just embed the new description joined with the title which is passed in.
-    embedding_text = f"{title}: {description}"
+    embedding_text = description
     embedding = _generate_embedding(embedding_text)
     if embedding is not None:
         update_data["embedding"] = embedding
 
-    result = collection.update_one(
-        {"email": email, "title": title},
-        {"$set": update_data}
-    )
-    return result.acknowledged
+    try:
+        # Try as ObjectId first
+        result = collection.update_one(
+            {"email": email, "_id": ObjectId(identifier)},
+            {"$set": {"description": description}}
+        )
+        if result.acknowledged and result.matched_count > 0:
+            return True
+    except Exception:
+        pass
+        
+    # Fallback to Title
+    try:
+        result = collection.update_one(
+            {"email": email, "title": identifier},
+            {"$set": update_data}
+        )
+        return result.acknowledged
+    except Exception:
+        return False
 
 
-def set_task_tags(client: MongoClient, email: str, title: str, tag_names: List[str]) -> bool:
+def set_task_tags(client: MongoClient, email: str, identifier: str, tag_names: List[str]) -> bool:
     """
-    Sets or updates the tag_names list for a task.
-    Returns True if the operation was successful.
-    """
-    db = client[DB_NAME]
-    collection = db["tasks"]
-    
-    result = collection.update_one(
-        {"email": email, "title": title},
-        {"$set": {"tag_names": tag_names}}
-    )
-    return result.acknowledged
-
-
-def add_tag_to_task(client: MongoClient, email: str, title: str, tag_name: str) -> bool:
-    """
-    Adds a single tag to a task's tag_names list (avoids duplicates).
-    Returns True if the operation was successful.
-    """
-    db = client[DB_NAME]
-    collection = db["tasks"]
-    
-    result = collection.update_one(
-        {"email": email, "title": title},
-        {"$addToSet": {"tag_names": tag_name}}
-    )
-    return result.acknowledged
-
-
-def remove_tag_from_task(client: MongoClient, email: str, title: str, tag_name: str) -> bool:
-    """
-    Removes a single tag from a task's tag_names list.
-    Returns True if the operation was successful.
+    Sets or updates the tag_names list for a task by ID or Title.
     """
     db = client[DB_NAME]
     collection = db["tasks"]
     
-    result = collection.update_one(
-        {"email": email, "title": title},
-        {"$pull": {"tag_names": tag_name}}
-    )
-    return result.acknowledged
+    try:
+        # Try as ObjectId first
+        result = collection.update_one(
+            {"email": email, "_id": ObjectId(identifier)},
+            {"$set": {"tag_names": tag_names}}
+        )
+        if result.acknowledged and result.matched_count > 0:
+            return True
+    except Exception:
+        pass
+        
+    # Fallback to Title
+    try:
+        result = collection.update_one(
+            {"email": email, "title": identifier},
+            {"$set": {"tag_names": tag_names}}
+        )
+        return result.acknowledged
+    except Exception:
+        return False
 
 
-def delete_task(client: MongoClient, email: str, title: str) -> bool:
-    """Deletes a specific task. Returns True if a task was deleted."""
+def add_tag_to_task(client: MongoClient, email: str, identifier: str, tag_name: str) -> bool:
+    """
+    Adds a single tag to a task's tag_names list (avoids duplicates) by ID or Title.
+    """
     db = client[DB_NAME]
     collection = db["tasks"]
-    result = collection.delete_one({"email": email, "title": title})
+    
+    try:
+        # Try as ObjectId first
+        result = collection.update_one(
+            {"email": email, "_id": ObjectId(identifier)},
+            {"$addToSet": {"tag_names": tag_name}}
+        )
+        if result.acknowledged and result.matched_count > 0:
+            return True
+    except Exception:
+        pass
+        
+    # Fallback to Title
+    try:
+        result = collection.update_one(
+            {"email": email, "title": identifier},
+            {"$addToSet": {"tag_names": tag_name}}
+        )
+        return result.acknowledged
+    except Exception:
+        return False
+
+
+def remove_tag_from_task(client: MongoClient, email: str, identifier: str, tag_name: str) -> bool:
+    """
+    Removes a single tag from a task's tag_names list by ID or Title.
+    """
+    db = client[DB_NAME]
+    collection = db["tasks"]
+    
+    try:
+        # Try as ObjectId first
+        result = collection.update_one(
+            {"email": email, "_id": ObjectId(identifier)},
+            {"$pull": {"tag_names": tag_name}}
+        )
+        if result.acknowledged and result.matched_count > 0:
+            return True
+    except Exception:
+        pass
+        
+    # Fallback to Title
+    try:
+        result = collection.update_one(
+            {"email": email, "title": identifier},
+            {"$pull": {"tag_names": tag_name}}
+        )
+        return result.acknowledged
+    except Exception:
+        return False
+
+
+def delete_task(client: MongoClient, email: str, identifier: str) -> bool:
+    """Deletes a specific task by ID or Title."""
+    db = client[DB_NAME]
+    collection = db["tasks"]
+    try:
+        # Try as ObjectId first
+        result = collection.delete_one({"email": email, "_id": ObjectId(identifier)})
+        if result.deleted_count > 0:
+            return True
+    except Exception:
+        pass
+    
+    # Fallback to Title
+    result = collection.delete_one({"email": email, "title": identifier})
     return result.deleted_count > 0
 
 
@@ -408,7 +561,7 @@ def seed_tags(client: MongoClient):
     Seeds persistent tags into the database for verification.
     Tags: cs3663, cleaning, coding-personal
     """
-    email = "ricardomulino@gmail.com"
+    email = "test@mulino.com"
     
     print("=" * 60)
     print("Seeding Persistent Tags")
@@ -574,8 +727,13 @@ client = MongoClient(MONGO_URI)
 # seed_tags(client)
 
 # Uncomment below to run full verification (creates and cleans up test data)
-set_task(client, "test@example.com", "Implement authentication system", "Build JWT-based authentication with refresh tokens and role-based access control", ["work"])
-set_task(client, "test@example.com", "Implement authentication system", "Build JWT-based authentication with refresh tokens and role-based access control", ["work"])
-set_task(client, "test@example.com", "Implement authentication system", "Build JWT-based authentication with refresh tokens and role-based access control", ["work"])
-set_task(client, "test@example.com", "Implement authentication system", "Build JWT-based authentication with refresh tokens and role-based access control", ["work"])
+# Run a simple test
+set_task(
+    client, 
+    "test@mulino.com", 
+    "Implement authentication system", 
+    "test-auth-1",
+    "Build JWT-based authentication with refresh tokens and role-based access control", 
+    ["work"]
+)
 client.close()

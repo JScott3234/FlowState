@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { X, Clock, Calendar as CalendarIcon, Tag, AlignLeft, CheckSquare, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CATEGORIES, type CategoryId } from '../../types/calendarTypes';
+import { type CategoryId, type Category } from '../../types/calendarTypes';
 
 interface CreateTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSave: (title: string, duration: number, startTime: Date, category: CategoryId, description: string, isCompleted: boolean, actualDuration?: number) => void;
+    categories: Category[];
 }
 
-export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onSave }) => {
+export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onSave, categories }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [duration, setDuration] = useState(60);
@@ -159,7 +160,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
                                             onChange={(e) => setCategory(e.target.value as CategoryId)}
                                             className="w-full bg-slate-950/50 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none"
                                         >
-                                            {CATEGORIES.map(cat => (
+                                            {categories.map(cat => (
                                                 <option key={cat.id} value={cat.id}>{cat.label}</option>
                                             ))}
                                         </select>

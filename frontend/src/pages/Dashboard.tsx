@@ -3,7 +3,8 @@ import { CalendarGrid } from '../components/calendar/CalendarGrid';
 import { TaskSidebar } from '../components/sidebar/TaskSidebar';
 import { CreateTaskModal } from '../components/modals/CreateTaskModal';
 import { useCalendarState } from '../hooks/useCalendarState';
-import type { CategoryId } from '../types/calendarTypes';
+import { useTags } from '../hooks/useTags';
+import type { CategoryId, Category } from '../types/calendarTypes';
 import { CATEGORIES } from '../types/calendarTypes';
 import { DndContext, DragOverlay, defaultDropAnimationSideEffects } from '@dnd-kit/core';
 import { useDragAndDrop } from '../hooks/useDragAndDrop';
@@ -21,6 +22,21 @@ export const Dashboard = () => {
         moveTask,
         deleteTask
     } = useCalendarState();
+
+    const { tags } = useTags();
+
+    // Merge default categories with fetched tags
+    // We treat tags as categories for now
+    const dynamicCategories: Category[] = [
+        ...CATEGORIES,
+        ...tags
+            .filter(t => !CATEGORIES.some(c => c.id === t.tag_name)) // Avoid duplicates
+            .map(t => ({
+                id: t.tag_name,
+                label: t.tag_name,
+                color: t.color || '#64748b' // Default color if not specified
+            }))
+    ];
 
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isDragExpanded, setIsDragExpanded] = useState(false);
@@ -110,6 +126,7 @@ export const Dashboard = () => {
                     onToggle={() => setIsSidebarOpen(prev => !prev)}
                     filter={filterCategory}
                     onFilterChange={setFilterCategory}
+                    categories={dynamicCategories}
                 />
                 <main className="flex-1 overflow-hidden relative glass-panel rounded-2xl flex flex-col">
                     {/* Header Controls */}
@@ -172,8 +189,9 @@ export const Dashboard = () => {
             <CreateTaskModal
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
+                categories={dynamicCategories}
                 onSave={(title, duration, startTime, category, description, isCompleted, actualDuration) => {
-                    const categoryColor = CATEGORIES.find(c => c.id === category)?.color || '#3b82f6';
+                    const categoryColor = dynamicCategories.find(c => c.id === category)?.color || '#3b82f6';
                     const endTime = new Date(startTime);
                     endTime.setMinutes(endTime.getMinutes() + duration);
 

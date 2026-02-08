@@ -1,4 +1,4 @@
-export type CategoryId = 'work' | 'school' | 'hobbies';
+export type CategoryId = string;
 
 export interface Category {
     id: CategoryId;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
-import { type Task, CATEGORIES, type CategoryId } from '../../types/calendarTypes';
+import { type Task, type CategoryId, type Category } from '../../types/calendarTypes';
 import { TASK_TEMPLATES, type TaskTemplate } from '../../data/templates';
 import { Plus, GripVertical, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -13,6 +13,7 @@ interface TaskSidebarProps {
     onToggle: () => void;
     filter: CategoryId | 'all';
     onFilterChange: (filter: CategoryId | 'all') => void;
+    categories: Category[];
 }
 
 export const TaskSidebar: React.FC<TaskSidebarProps> = ({
@@ -21,7 +22,8 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
     isOpen,
     onToggle,
     filter,
-    onFilterChange
+    onFilterChange,
+    categories
 }) => {
     const [isFilterExpanded, setIsFilterExpanded] = React.useState(false);
 
@@ -94,7 +96,7 @@ export const TaskSidebar: React.FC<TaskSidebarProps> = ({
                                         active={filter === 'all'}
                                         onClick={() => onFilterChange('all')}
                                     />
-                                    {CATEGORIES.map((cat: { id: CategoryId, label: string, color: string }) => (
+                                    {categories.map((cat) => (
                                         <FilterChip
                                             key={cat.id}
                                             label={cat.label}

@@ -4,7 +4,7 @@ import { addMinutes, isSameDay } from 'date-fns';
 import { taskAPI } from '../api/flowstate';
 
 // Hardcoded for dev/demo purposes
-const DEMO_EMAIL = "ricardomulino@gmail.com";
+const DEMO_EMAIL = "test@mulino.com";
 
 export function useCalendarState() {
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -48,7 +48,8 @@ export function useCalendarState() {
                 [task.category],
                 task.startTime,
                 task.endTime,
-                task.recurrence
+                task.recurrence,
+                task.color
             );
             // Refresh to get ID
             fetchTasks();
@@ -66,6 +67,7 @@ export function useCalendarState() {
             if (updates.endTime) backendUpdates.end_time = updates.endTime.toISOString();
             if (updates.tagNames) backendUpdates.tag_names = updates.tagNames;
             if (updates.isCompleted !== undefined) backendUpdates.is_completed = updates.isCompleted;
+            if (updates.color) backendUpdates.color = updates.color;
 
             await taskAPI.update(id, backendUpdates);
         } catch (e) {
@@ -91,9 +93,8 @@ export function useCalendarState() {
             taskAPI.update(id, {
                 start_time: newStartTime.toISOString(),
                 end_time: endTime.toISOString(),
-                // @ts-ignore
                 tag_names: [newCategory || t.category]
-            } as any).catch(console.error);
+            }).catch(console.error);
 
             return {
                 ...t,
@@ -127,7 +128,7 @@ export function useCalendarState() {
     const deleteTask = useCallback(async (id: string) => {
         setTasks((prev) => prev.filter((t) => t.id !== id));
         try {
-            await taskAPI.delete(id);
+            await taskAPI.deleteById(id);
         } catch (e) {
             console.error("Failed to delete task", e);
             // Optionally revert state here if needed

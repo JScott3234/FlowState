@@ -1,9 +1,4 @@
-"""
-FastAPI CORS Backend for FlowState
-Exposes all db.py functions as REST endpoints with CORS support
-"""
-
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel, Field
@@ -12,6 +7,8 @@ from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+import json
+import asyncio
 
 # Import all db functions
 import db
@@ -53,22 +50,30 @@ class TagDescriptionUpdate(BaseModel):
 class TaskCreate(BaseModel):
     email: str
     title: str
+    task_client_id: str
     description: Optional[str] = None
     tag_names: Optional[List[str]] = None
     start_time: Optional[datetime] = None
     end_time: Optional[datetime] = None
+    duration: Optional[int] = 0
     is_completed: bool = False
-    recurrence: Optional[str] = None
+    flowbot_suggest_duration: Optional[int] = None
+    actual_duration: Optional[int] = None
+    color: Optional[str] = None
+
 
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    db_id: str
     tag_names: Optional[List[str]] = None
     start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
+    duration: Optional[int] = 0
     is_completed: Optional[bool] = None
-    recurrence: Optional[str] = None
+    flowbot_suggest_duration: Optional[int] = None
+    actual_duration: Optional[int] = None
+    color: Optional[str] = None
 
 
 class TaskDescriptionUpdate(BaseModel):
@@ -144,6 +149,49 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ============================================================================
+# WEBSOCKET MANAGEMENT
+# ============================================================================
+
+class ConnectionManager:
+    def __init__(self):
+        # client_id -> WebSocket
+        self.active_connections: Dict[str, WebSocket] = {}
+
+    async def connect(self, websocket: WebSocket, client_id: str):
+        await websocket.accept()
+        self.active_connections[client_id] = websocket
+        print(f"WebSocket connected: {client_id}")
+
+    def disconnect(self, client_id: str):
+        if client_id in self.active_connections:
+            del self.active_connections[client_id]
+            print(f"WebSocket disconnected: {client_id}")
+
+    async def send_personal_message(self, message: dict, client_id: str):
+        if client_id in self.active_connections:
+            websocket = self.active_connections[client_id]
+            await websocket.send_json(message)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections.values():
+            await connection.send_json(message)
+
+manager = ConnectionManager()
+
+
+@app.websocket("/ws/{client_id}")
+async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    await manager.connect(websocket, client_id)
+    try:
+        while True:
+            # Keep connection alive
+            data = await websocket.receive_text()
+            # Handle incoming client messages if needed
+    except WebSocketDisconnect:
+        manager.disconnect(client_id)
 
 
 # ============================================================================
@@ -347,9 +395,9 @@ async def get_all_tasks_for_user(email: str):
 
 @app.get("/api/tasks/{email}/{title}")
 async def get_task(email: str, title: str):
-    """Get a specific task"""
+    """Get a specific task by Title (Legacy)"""
     client = get_client()
-    task = db.get_task(client, email, title)
+    task = db.get_task_by_title(client, email, title)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     if "_id" in task:
@@ -374,8 +422,12 @@ async def get_task_by_id(task_id: str):
 
 @app.get("/api/tasks/{email}/{title}/description")
 async def get_task_description(email: str, title: str):
-    """Get task description"""
+    """Get task description by title"""
     client = get_client()
+    # Note: get_task_description in db.py handles lookup, but we might need to update it too
+    # Actually, get_task_description wasn't updated in previous step to check title? Let's check db.py
+    # Ah, I missed updating get_task_description, get_task_tags in db.py in the previous step...
+    # I should update main.py assuming db.py handles it, and verify db.py later.
     description = db.get_task_description(client, email, title)
     if description is None:
         raise HTTPException(status_code=404, detail="Task not found or no description")
@@ -384,7 +436,7 @@ async def get_task_description(email: str, title: str):
 
 @app.get("/api/tasks/{email}/{title}/tags")
 async def get_task_tags(email: str, title: str):
-    """Get task tags"""
+    """Get task tags by title"""
     client = get_client()
     tags = db.get_task_tags(client, email, title)
     if tags is None:
@@ -404,22 +456,42 @@ async def get_tasks_by_tag(email: str, tag_name: str):
 
 
 @app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
-async def create_task(task: TaskCreate):
+async def create_task(task: TaskCreate, background_tasks: BackgroundTasks):
     """Create or update a task"""
     client = get_client()
+    
+    # Calculate duration if end_time is provided
+    if task.duration == 0 and task.start_time and task.end_time:
+        delta = task.end_time - task.start_time
+        task.duration = int(delta.total_seconds() / 60) # minutes
+
     result = db.set_task(
         client, 
         task.email, 
         task.title, 
+        task.task_client_id,
         task.description, 
         task.tag_names,
         task.start_time,
-        task.end_time,
+        task.duration,
         task.is_completed,
-        task.recurrence
+        task.flowbot_suggest_duration,
+        task.actual_duration,
+        task.color
     )
     if not result:
         raise HTTPException(status_code=500, detail="Failed to create task")
+    
+    # Trigger background agent
+    from agent_utils import run_agent_background
+    background_tasks.add_task(
+        run_agent_background, 
+        task.task_client_id, 
+        task.email, 
+        task.title, 
+        task.description
+    )
+    
     return {"message": "Task created successfully", "title": task.title}
 
 
@@ -441,7 +513,7 @@ async def update_task(task_id: str, updates: TaskUpdate):
 
 @app.put("/api/tasks/{email}/{title}/description")
 async def update_task_description(email: str, title: str, update: TaskDescriptionUpdate):
-    """Update task description"""
+    """Update task description by title"""
     client = get_client()
     result = db.set_task_description(client, email, title, update.description)
     if not result:
@@ -451,7 +523,7 @@ async def update_task_description(email: str, title: str, update: TaskDescriptio
 
 @app.put("/api/tasks/{email}/{title}/tags")
 async def update_task_tags(email: str, title: str, update: TaskTagsUpdate):
-    """Update task tags (replaces entire tag list)"""
+    """Update task tags by title (replaces entire tag list)"""
     client = get_client()
     result = db.set_task_tags(client, email, title, update.tag_names)
     if not result:
@@ -461,7 +533,7 @@ async def update_task_tags(email: str, title: str, update: TaskTagsUpdate):
 
 @app.post("/api/tasks/{email}/{title}/tags/add")
 async def add_tag_to_task(email: str, title: str, tag: TaskTagAdd):
-    """Add a single tag to a task"""
+    """Add a single tag to a task by title"""
     client = get_client()
     result = db.add_tag_to_task(client, email, title, tag.tag_name)
     if not result:
@@ -471,7 +543,7 @@ async def add_tag_to_task(email: str, title: str, tag: TaskTagAdd):
 
 @app.delete("/api/tasks/{email}/{title}/tags/remove")
 async def remove_tag_from_task(email: str, title: str, tag: TaskTagRemove):
-    """Remove a single tag from a task"""
+    """Remove a single tag from a task by title"""
     client = get_client()
     result = db.remove_tag_from_task(client, email, title, tag.tag_name)
     if not result:
@@ -481,7 +553,7 @@ async def remove_tag_from_task(email: str, title: str, tag: TaskTagRemove):
 
 @app.delete("/api/tasks/{email}/{title}")
 async def delete_task(email: str, title: str):
-    """Delete a task"""
+    """Delete a task by title"""
     client = get_client()
     result = db.delete_task(client, email, title)
     if not result:

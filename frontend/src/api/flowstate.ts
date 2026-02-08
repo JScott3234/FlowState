@@ -30,6 +30,12 @@ export interface Task {
     title: string;
     description?: string;
     tag_names?: string[];
+    start_time?: string;
+    end_time?: string;
+    duration?: number;
+    is_completed?: boolean;
+    recurrence?: string;
+    color?: string;
 }
 
 // ============================================================================
@@ -212,7 +218,9 @@ export const taskAPI = {
         tagNames?: string[],
         startTime?: Date,
         endTime?: Date,
-        recurrence?: string
+        recurrence?: string,
+        color?: string,
+        taskClientId?: string
     ): Promise<void> => {
         const response = await fetch(`${API_BASE}/tasks`, {
             method: 'POST',
@@ -220,11 +228,13 @@ export const taskAPI = {
             body: JSON.stringify({
                 email,
                 title,
+                task_client_id: taskClientId || crypto.randomUUID(),
                 description,
                 tag_names: tagNames,
                 start_time: startTime?.toISOString(),
                 end_time: endTime?.toISOString(),
-                recurrence
+                recurrence,
+                color
             }),
         });
         if (!response.ok) throw new Error('Failed to create task');

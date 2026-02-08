@@ -162,7 +162,7 @@ export function useDragAndDrop({ tasks, onTaskMove, onTaskCreate }: UseDragAndDr
                 newStartTime.setMinutes(newMinutes % 60);
 
                 // Collision Check
-                const { movedTasks } = checkAndPushCollisions(
+                checkAndPushCollisions(
                     tasks,
                     { id: 'temp-new', startTime: newStartTime, duration: activeTemplate.duration, category: (overData.category || activeTemplate.category) as CategoryId }
                 );
